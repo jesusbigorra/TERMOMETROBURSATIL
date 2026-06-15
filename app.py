@@ -209,7 +209,7 @@ else:
     # 📚 ACADEMIA JB: VIDEOS Y LECTURAS ESTRATÉGICAS (ANCLADO AL FONDO)
     # =========================================================================
     st.markdown("---")
-    with st.expander("📚 Academia JB: Videos y Lecturas Estratégicas", expanded=False):
+    with st.expander("📚 Academia JB: Videos y Lecturas Estratégicas", expanded=True):
         col_vid, col_lib = st.columns([1.2, 1])
         
         with col_vid:
