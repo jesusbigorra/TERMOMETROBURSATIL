@@ -2,9 +2,40 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import os
+import urllib.request
+import urllib.parse
+import json
 
 # Configuración de la página en modo oscuro
 st.set_page_config(page_title="JB TERMOMETRO BURSATIL", page_icon="🌡️", layout="wide")
+
+# =========================================================================
+# 🔍 FUNCIÓN INTERNA: MOTOR DE BÚSQUEDA INTELIGENTE EN YAHOO FINANCE
+# =========================================================================
+def buscar_ticker_inteligente(query):
+    if not query or len(query) < 2:
+        return []
+    try:
+        # Codificamos el texto para la web (ej: "Coca Cola" -> "Coca%20Cola")
+        query_con_formato = urllib.parse.quote(query)
+        url = f"https://query1.finance.yahoo.com/v1/finance/search?q={query_con_formato}&quotesCount=5&newsCount=0"
+        
+        # Hacemos la petición simulando un navegador para evitar bloqueos
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req) as response:
+            data = json.loads(response.read().decode())
+            quotes = data.get("quotes", [])
+            
+            sugerencias = []
+            for item in quotes:
+                symbol = item.get("symbol")
+                name = item.get("shortname", item.get("longname", ""))
+                # Solo añadimos si tiene Ticker y omitimos opciones secundarias confusas
+                if symbol and not symbol.contains("."):
+                    sugerencias.append(f"{symbol} | {name}")
+            return sugerencias
+    except Exception:
+        return []
 
 # =========================================================================
 # 🔐 CONFIGURACIÓN DE SEGURIDAD (ACCESO PERSONALIZADO)
@@ -14,7 +45,7 @@ CONTRASEÑA_CORRECTA = "JB2026"
 # Barra lateral de control y acceso
 st.sidebar.title("🔐 Control de Acceso")
 
-# 🎨 TU LOGO ESPECTACULAR SE QUEDA AQUÍ TOTALMENTE INTACTO
+# 🎨 TU LOGO SE QUEDA AQUÍ TOTALMENTE INTACTO
 if os.path.exists("logo.png"):
     st.sidebar.image("logo.png", use_container_width=True)
 elif os.path.exists("logo.jpg"):
@@ -32,30 +63,34 @@ else:
     # 🔓 SISTEMA DESBLOQUEADO - MOSTRAR PIZARRA REAL JB
     st.sidebar.success("🔓 Acceso Concedido")
     
-    # El icono y título principal
     st.title("🌡️📈 Mi Pizarra JB TERMOMETRO BURSATIL")
     st.subheader("Detecta puntos clave para optimizar tus activos")
 
-    # =========================================================================
-    # 📡 CONTROL AUTOMATIZADO DEL RADAR JB (MEMORIA DE TICKERS CON DESTRUCCIÓN "X")
-    # =========================================================================
+    # 📡 CONTROL AUTOMATIZADO DEL RADAR JB (MEMORIA INTERNA)
     if "radar_tickers" not in st.session_state:
         st.session_state.radar_tickers = ["SPYM", "QQQM", "SCHD", "VXUS", "SCHG", "JEPQ", "MSFT", "NVDA", "KO", "WMT"]
 
     st.write("### 📡 Panel de Control del Radar JB")
     
-    # Formulario limpio para agregar nuevos activos sin perder la lista actual
-    with st.form("form_radar", clear_on_submit=True):
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            nuevo_ticker = st.text_input("✍️ Escribe un nuevo Ticker para agregarlo al Radar (ej: AAPL, TSLA, BTC-USD):").strip().upper()
-        with col2:
-            btn_agregar = st.form_submit_button("➕ Agregar al Radar")
+    # =========================================================================
+    # 🎯 NUEVO BUSCADOR INTELIGENTE EN VIVO
+    # =========================================================================
+    texto_busqueda = st.text_input("✍️ Escribe el nombre de la empresa o el Ticker (ej: Mcdonalds, Apple, Coca Cola, btc-usd):").strip()
+    
+    if texto_busqueda:
+        lista_opciones = buscar_ticker_inteligente(texto_busqueda)
+        
+        if lista_opciones:
+            opcion_seleccionada = st.selectbox("🎯 Sugerencias encontradas en la Bolsa (Selecciona una):", lista_opciones)
+            ticker_final = opcion_seleccionada.split(" | ")[0].strip().upper()
             
-        if btn_agregar and nuevo_ticker:
-            if nuevo_ticker not in st.session_state.radar_tickers:
-                st.session_state.radar_tickers.append(nuevo_ticker)
-                st.rerun()
+            if st.button(f"➕ Agregar {ticker_final} al Radar"):
+                if ticker_final not in st.session_state.radar_tickers:
+                    st.session_state.radar_tickers.append(ticker_final)
+                    st.success(f"¡{ticker_final} añadido al Radar con éxito!")
+                    st.rerun()
+        else:
+            st.caption("Searching... Sigue escribiendo el nombre completo si no aparece.")
 
     # Caja interactiva con botones "X" nativos para eliminar del radar al instante
     tickers_filtrados = st.multiselect(
@@ -126,7 +161,7 @@ else:
                 puntos_rsi = (70 - rsi) * 1.25
                 puntos_rsi = max(0.0, min(50.0, puntos_rsi))
 
-                # Evaluación Estricta de Señales
+                # Evaluation Estricta de Señales
                 if rsi >= 65 or puntos_sma == 0:
                     senal = "🔴 Descartado de momento"
                     nivel_jb = 10  
@@ -139,35 +174,21 @@ else:
 
                 nivel_jb = min(max(nivel_jb, 10), 100)
 
-                # =========================================================================
-                # 🎯 INGENIERÍA DE DEEP-LINKS EXACTOS (SOPORTE MULTI-PLATAFORMA MILIMÉTRICO)
-                # =========================================================================
+                # Links multi-plataforma quirúrgicos
                 url_yahoo = f"https://es-us.finanzas.yahoo.com/chart/{ticker_symbol}"
                 url_finviz = f"https://finviz.com/quote.ashx?t={ticker_symbol}"
                 
-                # Enlace inteligente para ETF.com (Si es stock, busca para evitar el "None")
                 if tipo == "ETF":
                     url_etf = f"https://www.etf.com/{ticker_symbol}"
                 else:
                     url_etf = f"https://www.etf.com/search?q={ticker_symbol}"
                 
-                # Enlace de precisión quirúrgica para Morningstar (Mapeando la Bolsa del activo)
                 exchange = info.get("exchange", "").upper()
                 if tipo == "ETF":
-                    if "NAS" in exchange or "NMS" in exchange:
-                        exch_code = "xnas"
-                    elif "BATS" in exchange:
-                        exch_code = "bats"
-                    else:
-                        exch_code = "arcx"
+                    exch_code = "xnas" if ("NAS" in exchange or "NMS" in exchange) else ("bats" if "BATS" in exchange else "arcx")
                     url_mstar = f"https://www.morningstar.com/etfs/{exch_code}/{ticker_symbol.lower()}/quote"
                 else:
-                    if "NAS" in exchange or "NMS" in exchange:
-                        exch_code = "xnas"
-                    elif "NYE" in exchange or "NYQ" in exchange or "NYSE" in exchange:
-                        exch_code = "xnys"
-                    else:
-                        exch_code = "xnas"
+                    exch_code = "xnys" if ("NYE" in exchange or "NYQ" in exchange or "NYSE" in exchange) else "xnas"
                     url_mstar = f"https://www.morningstar.com/stocks/{exch_code}/{ticker_symbol.lower()}/quote"
 
                 datos_pizarra.append({
@@ -186,9 +207,7 @@ else:
             except Exception as e:
                 pass
 
-        # =========================================================================
-        # 🔓 RENDERIZADO AVANZADO DE TABLA PREMIUM
-        # =========================================================================
+        # Renderizado de la tabla con los hipervínculos ocultos en los iconos
         if datos_pizarra:
             df_pizarra = pd.DataFrame(datos_pizarra)
             st.dataframe(
@@ -196,25 +215,9 @@ else:
                 use_container_width=True, 
                 hide_index=True,
                 column_config={
-                    "Ticker": st.column_config.LinkColumn(
-                        "Ticker",
-                        display_text=r"https://es-us\.finanzas\.yahoo\.com/chart/(.*)",
-                        help="Gráfico avanzado interactivo en Yahoo Finance"
-                    ),
-                    "ETF.com": st.column_config.LinkColumn(
-                        "ETF.com",
-                        display_text="🟢",
-                        help="Análisis de costos y holdings en ETF.com"
-                    ),
-                    "M-Star": st.column_config.LinkColumn(
-                        "M-Star",
-                        display_text="🔴",
-                        help="Ficha de Morningstar directa con valoración fundamental y estrellas"
-                    ),
-                    "Finviz": st.column_config.LinkColumn(
-                        "Finviz",
-                        display_text="📊",
-                        help="Radiografía fundamental rápida en Finviz"
-                    ),
+                    "Ticker": st.column_config.LinkColumn("Ticker", display_text=r"https://es-us\.finanzas\.yahoo\.com/chart/(.*)"),
+                    "ETF.com": st.column_config.LinkColumn("ETF.com", display_text="🟢"),
+                    "M-Star": st.column_config.LinkColumn("M-Star", display_text="🔴"),
+                    "Finviz": st.column_config.LinkColumn("Finviz", display_text="📊"),
                 }
             )
