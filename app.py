@@ -3,7 +3,7 @@ import yfinance as yf
 import pandas as pd
 import os
 
-# Configuración de la página en modo oscuro (Ahora con el termómetro en la pestaña del navegador)
+# Configuración de la página en modo oscuro
 st.set_page_config(page_title="JB TERMOMETRO BURSATIL", page_icon="🌡️", layout="wide")
 
 # =========================================================================
@@ -14,7 +14,7 @@ CONTRASEÑA_CORRECTA = "JB2026"
 # Barra lateral de control y acceso
 st.sidebar.title("🔐 Control de Acceso")
 
-# 🎨 TU LOGO ESPECTACULAR SE QUEDA AQUÍ TOTALMENTE INTACTO
+# 🎨 TU LOGO SE QUEDA AQUÍ TOTALMENTE INTACTO
 if os.path.exists("logo.png"):
     st.sidebar.image("logo.png", use_container_width=True)
 elif os.path.exists("logo.jpg"):
@@ -32,9 +32,7 @@ else:
     # 🔓 SISTEMA DESBLOQUEADO - MOSTRAR PIZARRA REAL JB
     st.sidebar.success("🔓 Acceso Concedido")
     
-    # =========================================================================
-    # 🔄 NUEVO ICONO AL LADO DEL ENUNCIADO PRINCIPAL (TERMÓMETRO + TENDENCIA)
-    # =========================================================================
+    # El icono corregido arriba
     st.title("🌡️📈 Mi Pizarra JB TERMOMETRO BURSATIL")
     st.subheader("Detecta puntos clave para optimizar tus activos")
 
@@ -66,7 +64,7 @@ else:
                 sma100 = df['Close'].rolling(window=100).mean().iloc[-1]
                 sma200 = df['Close'].rolling(window=200).mean().iloc[-1]
                 
-                # Calibración del RSI (14) Wilder
+                # Calibración del RSI (14) Wilder (Idéntico a Yahoo Finance)
                 delta = df['Close'].diff()
                 gain = delta.clip(lower=0)
                 loss = -delta.clip(upper=0)
@@ -80,28 +78,50 @@ else:
                 quote_type = info.get("quoteType", "").upper()
                 tipo = "ETF" if quote_type == "ETF" else "Stock"
                 
-                # Las 4 Zonas de Compra Estrictas de Jesús
+                # =========================================================================
+                # 🎯 ASIGNACIÓN DE PUNTOS POR MEDIAS MÓVILES (MÁXIMO 50 PUNTOS)
+                # =========================================================================
                 if precio_actual < sma200:
                     posicion_str = "⚫ Debajo SMA200 (Cuarta zona de compra)"
+                    puntos_sma = 50
                 elif precio_actual < sma100:
                     posicion_str = "🔴 Debajo SMA100 (Tercera zona de compra)"
+                    puntos_sma = 40
                 elif precio_actual < sma50:
                     posicion_str = "🟢 Debajo SMA50 (Segunda zona de compra)"
+                    puntos_sma = 30
                 elif precio_actual < sma20:
                     posicion_str = "🔵 Debajo SMA20 (Primera zona de compra)"
+                    puntos_sma = 20
                 else:
-                    posicion_str = "🚀 Sobre todas las SMA (Zonas superadas)"
+                    posicion_str = "❌ Sobre todas las SMA (Altos históricos)"
+                    puntos_sma = 0
 
-                # Lógica de la Señal Semáforo
-                if precio_actual > sma50 and rsi < 60:
+                # =========================================================================
+                # 🎯 EL RSI TOMA EL PROTAGONISMO DE LA ECUACIÓN (MÁXIMO 50 PUNTOS)
+                # Otorga los 50 puntos si el RSI está en 30 o menos, y baja a 0 si llega a 70.
+                # =========================================================================
+                puntos_rsi = (70 - rsi) * 1.25
+                puntos_rsi = max(0.0, min(50.0, puntos_rsi))
+
+                # =========================================================================
+                # 🎯 EVALUACIÓN ESTRICTA DE SEÑALES SEGÚN TU FILOSOFÍA
+                # =========================================================================
+                if rsi >= 65 or puntos_sma == 0:
+                    # REGLA DE ORO: Si el RSI está muy inflado o el precio superó las medias -> DESCARTADO
+                    senal = "🔴 Descartado de momento"
+                    nivel_jb = 10  # Penalización total por riesgo extremo
+                elif rsi <= 40 and puntos_sma >= 30:
+                    # REGLA DE ORO: Si está en una buena zona de medias Y el RSI está frío (cerca de 30) -> INTERESANTE
                     senal = "🟢 Interesante"
+                    nivel_jb = int(puntos_sma + puntos_rsi)
                 else:
+                    # Situaciones intermedias (RSI moderado o zonas de medias iniciales)
                     senal = "🟡 A considerar"
-                    
-                # Cálculo oficial del "Nivel JB"
-                puntos_sma = 50 if precio_actual > sma50 else 20
-                puntos_rsi = (1 - abs(rsi - 45)/55) * 50
-                nivel_jb = int(puntos_sma + puntos_rsi)
+                    nivel_jb = int(puntos_sma + puntos_rsi)
+
+                # Asegurar límites visuales del indicador
+                nivel_jb = min(max(nivel_jb, 10), 100)
 
                 datos_pizarra.append({
                     "Ticker": ticker_symbol,
@@ -111,16 +131,15 @@ else:
                     "RSI (14) Wilder": f"{rsi:.2f}",
                     "Posición MAs": posicion_str,
                     "Señal": senal,
-                    "Nivel JB": min(max(nivel_jb, 10), 100)
+                    "Nivel JB": nivel_jb
                 })
             except Exception as e:
                 pass
 
-        # Desplegar la tabla estructurada
+        # Desplegar la tabla estructurada en toda la pantalla
         if datos_pizarra:
             df_pizarra = pd.DataFrame(datos_pizarra)
             st.dataframe(df_pizarra, use_container_width=True, hide_index=True)
-
     
            
                   
