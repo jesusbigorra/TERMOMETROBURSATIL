@@ -10,17 +10,15 @@ import json
 st.set_page_config(page_title="JB TERMOMETRO BURSATIL", page_icon="🌡️", layout="wide")
 
 # =========================================================================
-# 🔍 FUNCIÓN INTERNA: MOTOR DE BÚSQUEDA INTELIGENTE EN YAHOO FINANCE
+# 🔍 MOTOR DE BÚSQUEDA INTELIGENTE EN YAHOO FINANCE (CORREGIDO)
 # =========================================================================
 def buscar_ticker_inteligente(query):
     if not query or len(query) < 2:
         return []
     try:
-        # Codificamos el texto para la web (ej: "Coca Cola" -> "Coca%20Cola")
         query_con_formato = urllib.parse.quote(query)
         url = f"https://query1.finance.yahoo.com/v1/finance/search?q={query_con_formato}&quotesCount=5&newsCount=0"
         
-        # Hacemos la petición simulando un navegador para evitar bloqueos
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req) as response:
             data = json.loads(response.read().decode())
@@ -30,8 +28,8 @@ def buscar_ticker_inteligente(query):
             for item in quotes:
                 symbol = item.get("symbol")
                 name = item.get("shortname", item.get("longname", ""))
-                # Solo añadimos si tiene Ticker y omitimos opciones secundarias confusas
-                if symbol and not symbol.contains("."):
+                # SOLUCIÓN DEL BUG: Usamos el operador correcto de Python 'not in'
+                if symbol and "." not in symbol:
                     sugerencias.append(f"{symbol} | {name}")
             return sugerencias
     except Exception:
@@ -73,9 +71,9 @@ else:
     st.write("### 📡 Panel de Control del Radar JB")
     
     # =========================================================================
-    # 🎯 NUEVO BUSCADOR INTELIGENTE EN VIVO
+    # 🎯 TEXTO LIMPIO SOLICITADO POR JESÚS (SIN EJEMPLOS)
     # =========================================================================
-    texto_busqueda = st.text_input("✍️ Escribe el nombre de la empresa o el Ticker (ej: Mcdonalds, Apple, Coca Cola, btc-usd):").strip()
+    texto_busqueda = st.text_input("✍️ Pon el nombre de tu empresa o tu ETF:").strip()
     
     if texto_busqueda:
         lista_opciones = buscar_ticker_inteligente(texto_busqueda)
@@ -90,7 +88,7 @@ else:
                     st.success(f"¡{ticker_final} añadido al Radar con éxito!")
                     st.rerun()
         else:
-            st.caption("Searching... Sigue escribiendo el nombre completo si no aparece.")
+            st.caption("Buscando en los mercados globales... Sigue escribiendo.")
 
     # Caja interactiva con botones "X" nativos para eliminar del radar al instante
     tickers_filtrados = st.multiselect(
@@ -221,3 +219,6 @@ else:
                     "Finviz": st.column_config.LinkColumn("Finviz", display_text="📊"),
                 }
             )
+    
+              
+             
