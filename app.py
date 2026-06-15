@@ -227,4 +227,3 @@ else:
                     "Finviz": st.column_config.LinkColumn("Finviz", display_text="📊"),
                 }
             )
-             
