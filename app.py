@@ -36,16 +36,43 @@ else:
     st.title("🌡️📈 Mi Pizarra JB TERMOMETRO BURSATIL")
     st.subheader("Detecta puntos clave para optimizar tus activos")
 
-    # Tu portafolio real de 10 activos fijos
-    MI_PORTAFOLIO = ["SPYM", "QQQM", "SCHD", "VXUS", "SCHG", "JEPQ", "MSFT", "NVDA", "KO", "WMT"]
+    # =========================================================================
+    # 📡 CONTROL AUTOMATIZADO DEL RADAR JB (MEMORIA DE TICKERS CON DESTRUCCIÓN "X")
+    # =========================================================================
+    if "radar_tickers" not in st.session_state:
+        st.session_state.radar_tickers = ["SPYM", "QQQM", "SCHD", "VXUS", "SCHG", "JEPQ", "MSFT", "NVDA", "KO", "WMT"]
 
-    tickers_input = st.text_input("Añade o modifica tus tickers (separados por comas):", value=", ".join(MI_PORTAFOLIO))
-    tickers = [t.strip().upper() for t in tickers_input.split(",") if t.strip()]
+    st.write("### 📡 Panel de Control del Radar JB")
+    
+    # Formulario limpio para agregar nuevos activos sin perder la lista actual
+    with st.form("form_radar", clear_on_submit=True):
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            nuevo_ticker = st.text_input("✍️ Escribe un nuevo Ticker para agregarlo al Radar (ej: AAPL, TSLA, BTC-USD):").strip().upper()
+        with col2:
+            btn_agregar = st.form_submit_button("➕ Agregar al Radar")
+            
+        if btn_agregar and nuevo_ticker:
+            if nuevo_ticker not in st.session_state.radar_tickers:
+                st.session_state.radar_tickers.append(nuevo_ticker)
+                st.rerun()
+
+    # Caja interactiva con botones "X" nativos para eliminar del radar al instante
+    tickers_filtrados = st.multiselect(
+        "📋 Activos bajo la lupa en tu Radar actual (Haz clic en la 'X' de cualquiera para eliminarlo permanentemente):",
+        options=st.session_state.radar_tickers,
+        default=st.session_state.radar_tickers
+    )
+
+    # Si el usuario eliminó un activo usando la "X", actualizamos la memoria interna de inmediato
+    if tickers_filtrados != st.session_state.radar_tickers:
+        st.session_state.radar_tickers = tickers_filtrados
+        st.rerun()
 
     datos_pizarra = []
 
-    if tickers:
-        for ticker_symbol in tickers:
+    if tickers_filtrados:
+        for ticker_symbol in tickers_filtrados:
             try:
                 ticker = yf.Ticker(ticker_symbol)
                 df = ticker.history(period="1y")
@@ -73,7 +100,7 @@ else:
                 rs = ema_gain / ema_loss
                 rsi = 100 - (100 / (1 + rs.iloc[-1]))
                 
-                # Clasificación Stock vs ETF
+                # Clasificación Real Automatizada: Stock vs ETF
                 info = ticker.info
                 quote_type = info.get("quoteType", "").upper()
                 tipo = "ETF" if quote_type == "ETF" else "Stock"
@@ -113,12 +140,35 @@ else:
                 nivel_jb = min(max(nivel_jb, 10), 100)
 
                 # =========================================================================
-                # 🎯 CONSTRUCCIÓN DE LINKS MULTI-PLATAFORMA INTERNACIONALES
+                # 🎯 INGENIERÍA DE DEEP-LINKS EXACTOS (SOPORTE MULTI-PLATAFORMA MILIMÉTRICO)
                 # =========================================================================
                 url_yahoo = f"https://es-us.finanzas.yahoo.com/chart/{ticker_symbol}"
-                url_etf = f"https://www.etf.com/{ticker_symbol}" if tipo == "ETF" else None
-                url_mstar = f"https://www.morningstar.com/search?query={ticker_symbol}"
                 url_finviz = f"https://finviz.com/quote.ashx?t={ticker_symbol}"
+                
+                # Enlace inteligente para ETF.com (Si es stock, busca para evitar el "None")
+                if tipo == "ETF":
+                    url_etf = f"https://www.etf.com/{ticker_symbol}"
+                else:
+                    url_etf = f"https://www.etf.com/search?q={ticker_symbol}"
+                
+                # Enlace de precisión quirúrgica para Morningstar (Mapeando la Bolsa del activo)
+                exchange = info.get("exchange", "").upper()
+                if tipo == "ETF":
+                    if "NAS" in exchange or "NMS" in exchange:
+                        exch_code = "xnas"
+                    elif "BATS" in exchange:
+                        exch_code = "bats"
+                    else:
+                        exch_code = "arcx"
+                    url_mstar = f"https://www.morningstar.com/etfs/{exch_code}/{ticker_symbol.lower()}/quote"
+                else:
+                    if "NAS" in exchange or "NMS" in exchange:
+                        exch_code = "xnas"
+                    elif "NYE" in exchange or "NYQ" in exchange or "NYSE" in exchange:
+                        exch_code = "xnys"
+                    else:
+                        exch_code = "xnas"
+                    url_mstar = f"https://www.morningstar.com/stocks/{exch_code}/{ticker_symbol.lower()}/quote"
 
                 datos_pizarra.append({
                     "Ticker": url_yahoo,
@@ -137,7 +187,7 @@ else:
                 pass
 
         # =========================================================================
-        # 🔓 RENDERIZADO AVANZADO DE BOTONES EMOJI MULTI-LINK
+        # 🔓 RENDERIZADO AVANZADO DE TABLA PREMIUM
         # =========================================================================
         if datos_pizarra:
             df_pizarra = pd.DataFrame(datos_pizarra)
@@ -149,17 +199,17 @@ else:
                     "Ticker": st.column_config.LinkColumn(
                         "Ticker",
                         display_text=r"https://es-us\.finanzas\.yahoo\.com/chart/(.*)",
-                        help="Gráfico avanzado e indicadores en Yahoo Finance"
+                        help="Gráfico avanzado interactivo en Yahoo Finance"
                     ),
                     "ETF.com": st.column_config.LinkColumn(
                         "ETF.com",
                         display_text="🟢",
-                        help="Ficha de costos y distribución en ETF.com (Solo para ETFs)"
+                        help="Análisis de costos y holdings en ETF.com"
                     ),
                     "M-Star": st.column_config.LinkColumn(
                         "M-Star",
                         display_text="🔴",
-                        help="Análisis de estrellas y valor fundamental en Morningstar"
+                        help="Ficha de Morningstar directa con valoración fundamental y estrellas"
                     ),
                     "Finviz": st.column_config.LinkColumn(
                         "Finviz",
@@ -168,4 +218,3 @@ else:
                     ),
                 }
             )
-       
