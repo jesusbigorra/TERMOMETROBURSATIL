@@ -15,11 +15,12 @@ CONTRASEÑA_CORRECTA = "JB2026"
 st.sidebar.title("🔐 Control de Acceso")
 
 # =========================================================================
-# 🎨 DETECCIÓN AUTOMÁTICA DEL LOGO 'logo.png'
-# En cuanto subas 'logo.png' a GitHub, este bloque lo encenderá solo.
+# 🎨 DETECCIÓN AUTOMÁTICA DEL LOGO (Soporta .png y .jpg)
 # =========================================================================
 if os.path.exists("logo.png"):
     st.sidebar.image("logo.png", use_container_width=True)
+elif os.path.exists("logo.jpg"):
+    st.sidebar.image("logo.jpg", use_container_width=True)
 
 password_input = st.sidebar.text_input("Introduce la Clave de Acceso:", type="password")
 
@@ -47,7 +48,6 @@ else:
         for ticker_symbol in tickers:
             try:
                 ticker = yf.Ticker(ticker_symbol)
-                # Descarga 1 año de historial en intervalo diario (estricto para el RSI Wilder)
                 df = ticker.history(period="1y")
                 
                 if df.empty:
@@ -64,26 +64,21 @@ else:
                 sma100 = df['Close'].rolling(window=100).mean().iloc[-1]
                 sma200 = df['Close'].rolling(window=200).mean().iloc[-1]
                 
-                # =========================================================================
-                # 🎯 CALIBRACIÓN DEL RSI (14) EN VELAS DIARIAS (ALGORITMO WILDER DE YAHOO)
-                # =========================================================================
+                # Calibración del RSI (14) Wilder (Fiel a Yahoo Finance)
                 delta = df['Close'].diff()
                 gain = delta.clip(lower=0)
                 loss = -delta.clip(upper=0)
-                
-                # Suavizado exponencial de Wilder (alpha = 1/14)
                 ema_gain = gain.ewm(alpha=1/14, adjust=False).mean()
                 ema_loss = loss.ewm(alpha=1/14, adjust=False).mean()
-                
                 rs = ema_gain / ema_loss
                 rsi = 100 - (100 / (1 + rs.iloc[-1]))
                 
-                # Clasificación Real Automatizada: Stock vs ETF
+                # Clasificación Stock vs ETF
                 info = ticker.info
                 quote_type = info.get("quoteType", "").upper()
                 tipo = "ETF" if quote_type == "ETF" else "Stock"
                 
-                # Lógica: Las 4 Zonas de Compra Estrictas de Jesús (Con Círculos de Color)
+                # Las 4 Zonas de Compra Estrictas de Jesús
                 if precio_actual < sma200:
                     posicion_str = "⚫ Debajo SMA200 (Cuarta zona de compra)"
                 elif precio_actual < sma100:
@@ -101,9 +96,7 @@ else:
                 else:
                     senal = "🟡 A considerar"
                     
-                # =========================================================================
-                # 🎯 Cálculo oficial del INDICADOR "NIVEL JB"
-                # =========================================================================
+                # Cálculo oficial del "Nivel JB"
                 puntos_sma = 50 if precio_actual > sma50 else 20
                 puntos_rsi = (1 - abs(rsi - 45)/55) * 50
                 nivel_jb = int(puntos_sma + puntos_rsi)
@@ -113,7 +106,7 @@ else:
                     "Tipo": tipo,
                     "Precio Actual": f"${precio_actual:.2f}",
                     "Cambio %": f"{'+' if cambio_porcentaje > 0 else ''}{cambio_porcentaje:.2f}%",
-                    "RSI (14) Wilder": f"{rsi:.2f}", # Nombre actualizado para mayor claridad técnica
+                    "RSI (14) Wilder": f"{rsi:.2f}",
                     "Posición MAs": posicion_str,
                     "Señal": senal,
                     "Nivel JB": min(max(nivel_jb, 10), 100)
@@ -121,10 +114,10 @@ else:
             except Exception as e:
                 pass
 
-        # Desplegar la tabla estructurada en toda la pantalla
+        # Desplegar la tabla estructurada
         if datos_pizarra:
             df_pizarra = pd.DataFrame(datos_pizarra)
             st.dataframe(df_pizarra, use_container_width=True, hide_index=True)
-
+       
             
-            
+          
