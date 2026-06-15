@@ -8,15 +8,13 @@ st.set_page_config(page_title="JB TERMOMETRO BURSATIL", layout="wide")
 
 # =========================================================================
 # 🔐 CONFIGURACIÓN DE SEGURIDAD (ACCESO PERSONALIZADO)
-# Modifica la palabra entre comillas para cambiar tu contraseña secreta.
 # =========================================================================
 CONTRASEÑA_CORRECTA = "JB2026"
 
 # Barra lateral de control y acceso
 st.sidebar.title("🔐 Control de Acceso")
 
-# 🎨 ESPACIO PARA TU FUTURO LOGO AUTOMATIZADO
-# Cuando subas tu archivo 'logo.png' a GitHub, el sistema lo encenderá solo.
+# 🎨 ESPACIO PARA TU LOGO AUTOMATIZADO
 if os.path.exists("logo.png"):
     st.sidebar.image("logo.png", use_container_width=True)
 
@@ -24,11 +22,13 @@ password_input = st.sidebar.text_input("Introduce la Clave de Acceso:", type="pa
 
 # Verificación de Seguridad para desbloquear la Pizarra
 if password_input != CONTRASEÑA_CORRECTA:
+    st.sidebar.error("❌ Contraseña Incorrecta")
     st.title("📊 JB TERMOMETRO BURSATIL")
     st.warning("⚠️ Acceso Restringido. Introduce la clave secreta en la barra lateral para desbloquear el sistema de indicadores bursátiles en tiempo real.")
     st.info("💡 Si eres un usuario autorizado y no tienes tu código de acceso, ponte en contacto con Jesús Bigorra.")
 else:
     # 🔓 SISTEMA DESBLOQUEADO - MOSTRAR PIZARRA REAL JB
+    st.sidebar.success("🔓 Acceso Concedido")
     st.title("📊 Mi Pizarra JB TERMOMETRO BURSATIL")
     st.subheader("Detecta puntos clave para optimizar tus activos")
 
@@ -44,6 +44,7 @@ else:
         for ticker_symbol in tickers:
             try:
                 ticker = yf.Ticker(ticker_symbol)
+                # Descarga 1 año de historial en intervalo de 1 día de forma estricta
                 df = ticker.history(period="1y")
                 
                 if df.empty:
@@ -60,11 +61,18 @@ else:
                 sma100 = df['Close'].rolling(window=100).mean().iloc[-1]
                 sma200 = df['Close'].rolling(window=200).mean().iloc[-1]
                 
-                # RSI (14)
+                # =========================================================================
+                # 🎯 CALIBRACIÓN DEL RSI (14) EN VELAS DIARIAS (ALGORITMO FIEL A YAHOO FINANCE)
+                # =========================================================================
                 delta = df['Close'].diff()
-                gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-                loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-                rs = gain / loss
+                gain = delta.clip(lower=0)
+                loss = -delta.clip(upper=0)
+                
+                # Suavizado exponencial de Wilder (alpha = 1/14)
+                ema_gain = gain.ewm(alpha=1/14, adjust=False).mean()
+                ema_loss = loss.ewm(alpha=1/14, adjust=False).mean()
+                
+                rs = ema_gain / ema_loss
                 rsi = 100 - (100 / (1 + rs.iloc[-1]))
                 
                 # Clasificación Real Automatizada: Stock vs ETF
@@ -72,7 +80,7 @@ else:
                 quote_type = info.get("quoteType", "").upper()
                 tipo = "ETF" if quote_type == "ETF" else "Stock"
                 
-                # Lógica: Las 4 Zonas de Compra Estrictas de Jesús (Con Círculos de Color)
+                # Lógica de las 4 Zonas de Compra Estrictas de Jesús
                 if precio_actual < sma200:
                     posicion_str = "⚫ Debajo SMA200 (Cuarta zona de compra)"
                 elif precio_actual < sma100:
@@ -84,15 +92,13 @@ else:
                 else:
                     posicion_str = "🚀 Sobre todas las SMA (Zonas superadas)"
 
-                # Lógica de la Señal Semáforo
+                # Lógica de la Señal Semáforo (Alerta de compra: RSI bajo y tendencia viva)
                 if precio_actual > sma50 and rsi < 60:
                     senal = "🟢 Interesante"
                 else:
                     senal = "🟡 A considerar"
                     
-                # =========================================================================
-                # 🎯 EVOLUCIÓN: CÁLCULO OFICIAL DEL "NIVEL JB"
-                # =========================================================================
+                # Cálculo oficial del "Nivel JB"
                 puntos_sma = 50 if precio_actual > sma50 else 20
                 puntos_rsi = (1 - abs(rsi - 45)/55) * 50
                 nivel_jb = int(puntos_sma + puntos_rsi)
