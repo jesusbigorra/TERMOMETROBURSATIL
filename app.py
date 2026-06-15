@@ -7,14 +7,19 @@ st.set_page_config(page_title="JB TERMOMETRO BURSATIL", layout="wide")
 st.title("📊 Mi Pizarra JB TERMOMETRO BURSATIL")
 st.subheader("Detecta puntos clave para optimizar tus activos")
 
-# Lista de tickers iniciales por defecto (puedes cambiarlos en la web)
-tickers_por_defecto = ["AMZN", "DIS", "GOOG", "HOOD", "JEPQ", "META", "MSFT", "NVDA", "SPY", "QQQM"]
-tickers_input = st.text_input("Añade o modifica tus tickers (separados por comas):", value=", ".join(tickers_por_defecto))
+# =========================================================================
+# 📝 TU PORTAFOLIO REAL POR DEFECTO AUTOMATIZADO 
+# Cada vez que abras la web, se cargarán estos 10 activos automáticamente.
+# =========================================================================
+MI_PORTAFOLIO = ["SPYM", "QQQM", "SCHD", "VXUS", "SCHG", "JEPQ", "MSFT", "NVDA", "KO", "WMT"]
+
+# Cuadro de texto que arranca automáticamente con tu portafolio guardado
+tickers_input = st.text_input("Añade o modifica tus tickers (separados por comas):", value=", ".join(MI_PORTAFOLIO))
 tickers = [t.strip().upper() for t in tickers_input.split(",") if t.strip()]
 
 datos_pizarra = []
 
-if st.button("🔄 Actualizar Datos Ahora") or tickers:
+if tickers:
     for ticker_symbol in tickers:
         try:
             ticker = yf.Ticker(ticker_symbol)
@@ -41,9 +46,16 @@ if st.button("🔄 Actualizar Datos Ahora") or tickers:
             rs = gain / loss
             rsi = 100 - (100 / (1 + rs.iloc[-1]))
             
-            # Tipo de activo simplificado
+            # 🔍 Clasificación Real Automatizada: Stock vs ETF
             info = ticker.info
-            tipo = "ETF" if "fund" in info.get("quoteType", "").lower() else "Stock"
+            quote_type = info.get("quoteType", "").upper()
+            
+            if quote_type == "ETF":
+                tipo = "ETF"
+            elif quote_type == "EQUITY":
+                tipo = "Stock"
+            else:
+                tipo = "Stock"  # Por seguridad en activos mixtos
             
             # Lógica de Posición de Medias Móviles
             sobre = []
@@ -61,13 +73,13 @@ if st.button("🔄 Actualizar Datos Ahora") or tickers:
             else:
                 posicion_str = f"Sobre {', '.join(sobre)} | Debajo {', '.join(debajo)}"
 
-            # Lógica de la Señal
+            # Lógica de la Señal Semáforo
             if precio_actual > sma50 and rsi < 60:
                 senal = "🟢 Interesante"
             else:
                 senal = "🟡 A considerar"
                 
-            # Simulación de Nivel LC
+            # Cálculo del Nivel de Fuerza del Activo
             puntos_sma = (len(sobre) / 4) * 50
             puntos_rsi = (1 - abs(rsi - 45)/55) * 50
             nivel_lc = int(puntos_sma + puntos_rsi)
@@ -85,7 +97,7 @@ if st.button("🔄 Actualizar Datos Ahora") or tickers:
         except Exception as e:
             pass
 
-    # Renderizar la tabla final bonita
+    # Renderizar la tabla en pantalla completa
     if datos_pizarra:
         df_pizarra = pd.DataFrame(datos_pizarra)
         st.dataframe(df_pizarra, use_container_width=True, hide_index=True)
