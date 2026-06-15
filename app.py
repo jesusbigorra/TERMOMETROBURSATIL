@@ -14,7 +14,10 @@ CONTRASEÑA_CORRECTA = "JB2026"
 # Barra lateral de control y acceso
 st.sidebar.title("🔐 Control de Acceso")
 
-# 🎨 ESPACIO PARA TU LOGO AUTOMATIZADO
+# =========================================================================
+# 🎨 DETECCIÓN AUTOMÁTICA DEL LOGO 'logo.png'
+# En cuanto subas 'logo.png' a GitHub, este bloque lo encenderá solo.
+# =========================================================================
 if os.path.exists("logo.png"):
     st.sidebar.image("logo.png", use_container_width=True)
 
@@ -44,7 +47,7 @@ else:
         for ticker_symbol in tickers:
             try:
                 ticker = yf.Ticker(ticker_symbol)
-                # Descarga 1 año de historial en intervalo de 1 día de forma estricta
+                # Descarga 1 año de historial en intervalo diario (estricto para el RSI Wilder)
                 df = ticker.history(period="1y")
                 
                 if df.empty:
@@ -62,7 +65,7 @@ else:
                 sma200 = df['Close'].rolling(window=200).mean().iloc[-1]
                 
                 # =========================================================================
-                # 🎯 CALIBRACIÓN DEL RSI (14) EN VELAS DIARIAS (ALGORITMO FIEL A YAHOO FINANCE)
+                # 🎯 CALIBRACIÓN DEL RSI (14) EN VELAS DIARIAS (ALGORITMO WILDER DE YAHOO)
                 # =========================================================================
                 delta = df['Close'].diff()
                 gain = delta.clip(lower=0)
@@ -80,7 +83,7 @@ else:
                 quote_type = info.get("quoteType", "").upper()
                 tipo = "ETF" if quote_type == "ETF" else "Stock"
                 
-                # Lógica de las 4 Zonas de Compra Estrictas de Jesús
+                # Lógica: Las 4 Zonas de Compra Estrictas de Jesús (Con Círculos de Color)
                 if precio_actual < sma200:
                     posicion_str = "⚫ Debajo SMA200 (Cuarta zona de compra)"
                 elif precio_actual < sma100:
@@ -92,13 +95,15 @@ else:
                 else:
                     posicion_str = "🚀 Sobre todas las SMA (Zonas superadas)"
 
-                # Lógica de la Señal Semáforo (Alerta de compra: RSI bajo y tendencia viva)
+                # Lógica de la Señal Semáforo
                 if precio_actual > sma50 and rsi < 60:
                     senal = "🟢 Interesante"
                 else:
                     senal = "🟡 A considerar"
                     
-                # Cálculo oficial del "Nivel JB"
+                # =========================================================================
+                # 🎯 Cálculo oficial del INDICADOR "NIVEL JB"
+                # =========================================================================
                 puntos_sma = 50 if precio_actual > sma50 else 20
                 puntos_rsi = (1 - abs(rsi - 45)/55) * 50
                 nivel_jb = int(puntos_sma + puntos_rsi)
@@ -108,7 +113,7 @@ else:
                     "Tipo": tipo,
                     "Precio Actual": f"${precio_actual:.2f}",
                     "Cambio %": f"{'+' if cambio_porcentaje > 0 else ''}{cambio_porcentaje:.2f}%",
-                    "RSI (14)": f"{rsi:.2f}",
+                    "RSI (14) Wilder": f"{rsi:.2f}", # Nombre actualizado para mayor claridad técnica
                     "Posición MAs": posicion_str,
                     "Señal": senal,
                     "Nivel JB": min(max(nivel_jb, 10), 100)
@@ -120,3 +125,6 @@ else:
         if datos_pizarra:
             df_pizarra = pd.DataFrame(datos_pizarra)
             st.dataframe(df_pizarra, use_container_width=True, hide_index=True)
+
+            
+            
