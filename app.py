@@ -113,12 +113,18 @@ else:
                 nivel_jb = min(max(nivel_jb, 10), 100)
 
                 # =========================================================================
-                # 🎯 CONSTRUCCIÓN DEL LINK DE ACCESO DIRECTO AL GRÁFICO INTERACTIVO
+                # 🎯 CONSTRUCCIÓN DE LINKS MULTI-PLATAFORMA INTERNACIONALES
                 # =========================================================================
-                url_grafico = f"https://es-us.finanzas.yahoo.com/chart/{ticker_symbol}"
+                url_yahoo = f"https://es-us.finanzas.yahoo.com/chart/{ticker_symbol}"
+                url_etf = f"https://www.etf.com/{ticker_symbol}" if tipo == "ETF" else None
+                url_mstar = f"https://www.morningstar.com/search?query={ticker_symbol}"
+                url_finviz = f"https://finviz.com/quote.ashx?t={ticker_symbol}"
 
                 datos_pizarra.append({
-                    "Ticker": url_grafico, # Guardamos la URL para transformarla en botón
+                    "Ticker": url_yahoo,
+                    "ETF.com": url_etf,
+                    "M-Star": url_mstar,
+                    "Finviz": url_finviz,
                     "Tipo": tipo,
                     "Precio Actual": f"${precio_actual:.2f}",
                     "Cambio %": f"{'+' if cambio_porcentaje > 0 else ''}{cambio_porcentaje:.2f}%",
@@ -131,7 +137,7 @@ else:
                 pass
 
         # =========================================================================
-        # 🔓 RENDERIZADO INTELIGENTE: TRANSFORMA LA COLUMNA EN BOTÓN LINK
+        # 🔓 RENDERIZADO AVANZADO DE BOTONES EMOJI MULTI-LINK
         # =========================================================================
         if datos_pizarra:
             df_pizarra = pd.DataFrame(datos_pizarra)
@@ -143,8 +149,23 @@ else:
                     "Ticker": st.column_config.LinkColumn(
                         "Ticker",
                         display_text=r"https://es-us\.finanzas\.yahoo\.com/chart/(.*)",
-                        help="Haz clic en cualquier Ticker para abrir su gráfico avanzado en Yahoo Finance"
-                    )
+                        help="Gráfico avanzado e indicadores en Yahoo Finance"
+                    ),
+                    "ETF.com": st.column_config.LinkColumn(
+                        "ETF.com",
+                        display_text="🟢",
+                        help="Ficha de costos y distribución en ETF.com (Solo para ETFs)"
+                    ),
+                    "M-Star": st.column_config.LinkColumn(
+                        "M-Star",
+                        display_text="🔴",
+                        help="Análisis de estrellas y valor fundamental en Morningstar"
+                    ),
+                    "Finviz": st.column_config.LinkColumn(
+                        "Finviz",
+                        display_text="📊",
+                        help="Radiografía fundamental rápida en Finviz"
+                    ),
                 }
             )
-                  
+       
