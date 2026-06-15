@@ -5,30 +5,30 @@ import os
 import urllib.request
 import urllib.parse
 import json
+from streamlit_searchbox import st_searchbox
 
-# Configuración de la página en modo oscuro
+# Configuración de la página en modo oscuro de un vistazo
 st.set_page_config(page_title="JB TERMOMETRO BURSATIL", page_icon="🌡️", layout="wide")
 
 # =========================================================================
-# 🔍 MOTOR DE BÚSQUEDA PROFESIONAL DE TICKERS (ESTILO FINVIZ / MORNINGSTAR)
+# 🔍 MOTOR DINÁMICO: CONSULTA A YAHOO FINANCE MIENTRAS ESCRIBES (LETRA A LETRA)
 # =========================================================================
-def buscar_ticker_inteligente(query):
-    if not query or len(query) < 2:
+def buscar_ticker_en_tiempo_real(search_term: str):
+    if not search_term or len(search_term) < 2:
         return []
     try:
-        # Limpiamos y codificamos la consulta para la web
-        query_con_formato = urllib.parse.quote(query.strip())
-        # Pedimos 10 resultados para garantizar que no se pierda el ticker principal de EE.UU.
-        url = f"https://query1.finance.yahoo.com/v1/finance/search?q={query_con_formato}&quotesCount=10&newsCount=0"
+        # Codificamos la palabra para la web
+        query_con_formato = urllib.parse.quote(search_term.strip())
+        url = f"https://query1.finance.yahoo.com/v1/finance/search?q={query_con_formato}&quotesCount=8&newsCount=0"
         
-        # Simulación de navegador de alta seguridad para evitar bloqueos del servidor
+        # Identidad de Wall Street para evitar bloqueos
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept': 'application/json'
         }
         
         req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=5) as response:
+        with urllib.request.urlopen(req, timeout=3) as response:
             data = json.loads(response.read().decode())
             quotes = data.get("quotes", [])
             
@@ -36,17 +36,13 @@ def buscar_ticker_inteligente(query):
             for item in quotes:
                 symbol = item.get("symbol")
                 name = item.get("shortname", item.get("longname", ""))
-                exchange = item.get("exchange", "").upper()
                 
-                # PRIORIDAD DE WALL STREET: Filtramos mercados secundarios confusos 
-                # Pero permitimos cripto (como BTC-USD) y los mercados principales americanos
+                # Filtramos mercados secundarios para mantener limpia la lista de EE.UU.
                 if symbol and ("." not in symbol or "-USD" in symbol):
-                    sugerencias.append({
-                        "ticker": symbol.upper(),
-                        "nombre": name if name else symbol,
-                        "bolsa": exchange
-                    })
-            return sugerencias[:4] # Devolvemos el Top 4 de coincidencias más limpias
+                    label_visual = f"➕ {symbol.upper()} | {name}"
+                    # Retornamos una tupla: (Lo que ve el usuario en la lista, el Ticker real)
+                    sugerencias.append((label_visual, symbol.upper()))
+            return sugerencias
     except Exception:
         return []
 
@@ -86,28 +82,21 @@ else:
     st.write("### 📡 Panel de Control del Radar JB")
     
     # =========================================================================
-    # 🎯 BUSCADOR EVOLUCIONADO: INTERFAZ DE 1-CLIC
+    # 🚀 EL BUSCADOR INTELIGENTE EN TIEMPO REAL (ESTILO FINVIZ / MORNINGSTAR)
+    # Busca y genera el listado de coincidencias mientras escribes de inmediato
     # =========================================================================
-    texto_busqueda = st.text_input("🔍 Pon el nombre de tu empresa o tu ETF:").strip()
+    ticker_seleccionado = st_searchbox(
+        buscar_ticker_en_tiempo_real,
+        placeholder="🔍 Escribe el nombre de la empresa o ETF (ej: Mcdonald, Mercado Libre, Coca Cola)...",
+        key="buscador_radar_jb"
+    )
     
-    if texto_busqueda:
-        resultados = buscar_ticker_inteligente(texto_busqueda)
-        
-        if resultados:
-            st.write("🎯 **Sugerencias del mercado (Haz clic para agregar directamente al Radar):**")
-            
-            # Diseñamos una fila de botones horizontales muy elegantes y limpios
-            cols_sug = st.columns(len(resultados))
-            for i, sug in enumerate(resultados):
-                with cols_sug[i]:
-                    label_boton = f"➕ {sug['ticker']}\n({sug['nombre'][:18]})"
-                    if st.button(label_boton, key=f"sug_{sug['ticker']}", use_container_width=True):
-                        if sug['ticker'] not in st.session_state.radar_tickers:
-                            st.session_state.radar_tickers.append(sug['ticker'])
-                            st.toast(f"✅ ¡{sug['ticker']} añadido al Radar!")
-                            st.rerun()
-        else:
-            st.caption("Buscando coincidencias en Wall Street... Si no aparece, prueba escribiendo el Ticker directo.")
+    # Si haces clic en una opción del listado, entra directamente a tu Radar
+    if ticker_seleccionado:
+        if ticker_seleccionado not in st.session_state.radar_tickers:
+            st.session_state.radar_tickers.append(ticker_seleccionado)
+            st.toast(f"✅ ¡{ticker_seleccionado} añadido al Radar!")
+            st.rerun()
 
     # Caja interactiva con botones "X" nativos para eliminar del radar al instante
     tickers_filtrados = st.multiselect(
@@ -238,3 +227,4 @@ else:
                     "Finviz": st.column_config.LinkColumn("Finviz", display_text="📊"),
                 }
             )
+             
