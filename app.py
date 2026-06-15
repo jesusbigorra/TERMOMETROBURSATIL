@@ -3,8 +3,8 @@ import yfinance as yf
 import pandas as pd
 import os
 
-# Configuración de la página en modo oscuro de un vistazo
-st.set_page_config(page_title="JB TERMOMETRO BURSATIL", layout="wide")
+# Configuración de la página en modo oscuro (Ahora con el termómetro en la pestaña del navegador)
+st.set_page_config(page_title="JB TERMOMETRO BURSATIL", page_icon="🌡️", layout="wide")
 
 # =========================================================================
 # 🔐 CONFIGURACIÓN DE SEGURIDAD (ACCESO PERSONALIZADO)
@@ -14,9 +14,7 @@ CONTRASEÑA_CORRECTA = "JB2026"
 # Barra lateral de control y acceso
 st.sidebar.title("🔐 Control de Acceso")
 
-# =========================================================================
-# 🎨 DETECCIÓN AUTOMÁTICA DEL LOGO (Soporta .png y .jpg)
-# =========================================================================
+# 🎨 TU LOGO ESPECTACULAR SE QUEDA AQUÍ TOTALMENTE INTACTO
 if os.path.exists("logo.png"):
     st.sidebar.image("logo.png", use_container_width=True)
 elif os.path.exists("logo.jpg"):
@@ -27,16 +25,20 @@ password_input = st.sidebar.text_input("Introduce la Clave de Acceso:", type="pa
 # Verificación de Seguridad para desbloquear la Pizarra
 if password_input != CONTRASEÑA_CORRECTA:
     st.sidebar.error("❌ Contraseña Incorrecta")
-    st.title("📊 JB TERMOMETRO BURSATIL")
+    st.title("🌡️ JB TERMOMETRO BURSATIL")
     st.warning("⚠️ Acceso Restringido. Introduce la clave secreta en la barra lateral para desbloquear el sistema de indicadores bursátiles en tiempo real.")
     st.info("💡 Si eres un usuario autorizado y no tienes tu código de acceso, ponte en contacto con Jesús Bigorra.")
 else:
     # 🔓 SISTEMA DESBLOQUEADO - MOSTRAR PIZARRA REAL JB
     st.sidebar.success("🔓 Acceso Concedido")
-    st.title("📊 Mi Pizarra JB TERMOMETRO BURSATIL")
+    
+    # =========================================================================
+    # 🔄 NUEVO ICONO AL LADO DEL ENUNCIADO PRINCIPAL (TERMÓMETRO + TENDENCIA)
+    # =========================================================================
+    st.title("🌡️📈 Mi Pizarra JB TERMOMETRO BURSATIL")
     st.subheader("Detecta puntos clave para optimizar tus activos")
 
-    # Tu portafolio real de 10 activos fijos solicitados
+    # Tu portafolio real de 10 activos fijos
     MI_PORTAFOLIO = ["SPYM", "QQQM", "SCHD", "VXUS", "SCHG", "JEPQ", "MSFT", "NVDA", "KO", "WMT"]
 
     tickers_input = st.text_input("Añade o modifica tus tickers (separados por comas):", value=", ".join(MI_PORTAFOLIO))
@@ -64,7 +66,7 @@ else:
                 sma100 = df['Close'].rolling(window=100).mean().iloc[-1]
                 sma200 = df['Close'].rolling(window=200).mean().iloc[-1]
                 
-                # Calibración del RSI (14) Wilder (Fiel a Yahoo Finance)
+                # Calibración del RSI (14) Wilder
                 delta = df['Close'].diff()
                 gain = delta.clip(lower=0)
                 loss = -delta.clip(upper=0)
@@ -118,6 +120,7 @@ else:
         if datos_pizarra:
             df_pizarra = pd.DataFrame(datos_pizarra)
             st.dataframe(df_pizarra, use_container_width=True, hide_index=True)
-       
-            
-          
+
+    
+           
+                  
