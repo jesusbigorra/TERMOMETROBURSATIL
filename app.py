@@ -8,8 +8,7 @@ st.title("📊 Mi Pizarra JB TERMOMETRO BURSATIL")
 st.subheader("Detecta puntos clave para optimizar tus activos")
 
 # =========================================================================
-# 📝 TU PORTAFOLIO REAL POR DEFECTO AUTOMATIZADO 
-# Cada vez que abras la web, se cargarán estos 10 activos automáticamente.
+# 📝 TU PORTAFOLIO REAL FIJO POR DEFECTO
 # =========================================================================
 MI_PORTAFOLIO = ["SPYM", "QQQM", "SCHD", "VXUS", "SCHG", "JEPQ", "MSFT", "NVDA", "KO", "WMT"]
 
@@ -46,32 +45,24 @@ if tickers:
             rs = gain / loss
             rsi = 100 - (100 / (1 + rs.iloc[-1]))
             
-            # 🔍 Clasificación Real Automatizada: Stock vs ETF
+            # Clasificación Real Automatizada: Stock vs ETF
             info = ticker.info
             quote_type = info.get("quoteType", "").upper()
+            tipo = "ETF" if quote_type == "ETF" else "Stock"
             
-            if quote_type == "ETF":
-                tipo = "ETF"
-            elif quote_type == "EQUITY":
-                tipo = "Stock"
+            # =========================================================================
+            # 🎯 NUEVA LÓGICA: LAS 4 ZONAS DE COMPRA DE JESÚS (CON COLOR)
+            # =========================================================================
+            if precio_actual < sma200:
+                posicion_str = "⚫ Debajo SMA200 (Cuarta zona de compra)"
+            elif precio_actual < sma100:
+                posicion_str = "🔴 Debajo SMA100 (Tercera zona de compra)"
+            elif precio_actual < sma50:
+                posicion_str = "🟢 Debajo SMA50 (Segunda zona de compra)"
+            elif precio_actual < sma20:
+                posicion_str = "🔵 Debajo SMA20 (Primera zona de compra)"
             else:
-                tipo = "Stock"  # Por seguridad en activos mixtos
-            
-            # Lógica de Posición de Medias Móviles
-            sobre = []
-            debajo = []
-            for nombre, valor in [("SMA200", sma200), ("SMA100", sma100), ("SMA50", sma50), ("SMA20", sma20)]:
-                if precio_actual > valor:
-                    sobre.append(nombre)
-                else:
-                    debajo.append(nombre)
-            
-            if len(debajo) == 4:
-                posicion_str = "Debajo de todas las SMA"
-            elif len(sobre) == 4:
-                posicion_str = "Sobre todas las SMA"
-            else:
-                posicion_str = f"Sobre {', '.join(sobre)} | Debajo {', '.join(debajo)}"
+                posicion_str = "🚀 Sobre todas las SMA (Zonas superadas)"
 
             # Lógica de la Señal Semáforo
             if precio_actual > sma50 and rsi < 60:
@@ -80,7 +71,7 @@ if tickers:
                 senal = "🟡 A considerar"
                 
             # Cálculo del Nivel de Fuerza del Activo
-            puntos_sma = (len(sobre) / 4) * 50
+            puntos_sma = 50 if precio_actual > sma50 else 20
             puntos_rsi = (1 - abs(rsi - 45)/55) * 50
             nivel_lc = int(puntos_sma + puntos_rsi)
 
