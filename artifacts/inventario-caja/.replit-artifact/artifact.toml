@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/inventario-caja/"
+title = "NUMINI SHOP"
+description = "NUMINI SHOP es una aplicación web para pequeños comercios que administra productos, existencias, costos y precios; registra ventas por método de pago y resume el movimiento de caja."
+version = "1.0.0"
+id = "artifacts/inventario-caja"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/inventario-caja/" ]
+localPort = 18239
+
+[services.development]
+run = "pnpm --filter @workspace/inventario-caja run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/inventario-caja", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/inventario-caja/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18239"
+BASE_PATH = "/inventario-caja/"

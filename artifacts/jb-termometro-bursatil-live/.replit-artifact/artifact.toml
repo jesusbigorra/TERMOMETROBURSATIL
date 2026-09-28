@@ -1,0 +1,28 @@
+kind = "data-app"
+previewPath = "/"
+title = "JB Termómetro Bursátil Live"
+description = "Dashboard visual para monitorear ETFs y acciones, detectar cambios de estado según las señales JB y recibir alertas cuando un activo entra o sale de una zona de interés."
+version = "1.0.0"
+id = "artifacts/jb-termometro-bursatil-live"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25842
+
+[services.development]
+run = "pnpm --filter @workspace/jb-termometro-bursatil-live run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/jb-termometro-bursatil-live", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/jb-termometro-bursatil-live/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25842"
+BASE_PATH = "/"

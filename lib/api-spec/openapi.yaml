@@ -1,0 +1,904 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: Storage
+    description: Protected object storage uploads and serving
+  - name: health
+    description: Health operations
+  - name: inventory
+    description: Product and stock operations
+  - name: sales
+    description: Sales and cash register operations
+  - name: market
+    description: Market radar operations
+  - name: watchlist
+    description: Personal watchlist operations
+  - name: alerts
+    description: WhatsApp alert preferences and delivery history
+paths:
+  /storage/uploads/request-url:
+    post:
+      tags: [Storage]
+      operationId: requestUploadUrl
+      summary: Requests a protected presigned URL for a product image upload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadUrlRequest"
+      responses:
+        "200":
+          description: Upload URL generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadUrlResponse"
+        "400": { description: Invalid image metadata }
+        "401": { description: Authentication required }
+  /storage/uploads/finalize:
+    post:
+      tags: [Storage]
+      operationId: finalizeProductImageUpload
+      summary: Finalizes an uploaded product image with public read ACL and authenticated ownership
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinalizeUploadRequest"
+      responses:
+        "200":
+          description: Upload finalized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinalizeUploadResponse"
+        "400": { description: "Invalid path, size, MIME type, or image content" }
+        "401": { description: Authentication required }
+        "404": { description: Object not found }
+  /storage/objects/{objectPath}:
+    get:
+      tags: [Storage]
+      operationId: getStorageObject
+      summary: Serves an uploaded product image
+      parameters:
+        - name: objectPath
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Image content
+          content:
+            "*/*":
+              schema: { type: string, format: binary }
+        "404": { description: Image not found }
+        "403": { description: Object is private or access is forbidden }
+  /inventory/products:
+    get:
+      operationId: listProducts
+      tags: [inventory]
+      summary: Lists products and current stock
+      responses:
+        "200":
+          description: Product inventory
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+    post:
+      operationId: createProduct
+      tags: [inventory]
+      summary: Creates a product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductInput"
+      responses:
+        "201":
+          description: Created product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "400": { description: Invalid product }
+  /inventory/products/{id}:
+    patch:
+      operationId: updateProduct
+      tags: [inventory]
+      summary: Updates a product and its stock
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductUpdate"
+      responses:
+        "200":
+          description: Updated product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "404": { description: Product not found }
+    delete:
+      operationId: deleteProduct
+      tags: [inventory]
+      summary: Deletes a product that has no sales
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204": { description: Product deleted }
+        "409": { description: Product has sales and cannot be deleted }
+        "404": { description: Product not found }
+  /inventory/dashboard:
+    get:
+      operationId: getInventoryDashboard
+      tags: [inventory]
+      summary: Returns inventory and cash register totals
+      responses:
+        "200":
+          description: Dashboard totals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryDashboard"
+  /inventory/activity:
+    get:
+      operationId: getInventoryActivity
+      tags: [inventory]
+      summary: Returns recent inventory and sales activity
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InventoryActivity"
+  /inventory/purchases/analyze:
+    post:
+      operationId: analyzePurchaseUpload
+      tags: [inventory]
+      summary: Extracts a transient spreadsheet, CSV, or image purchase file into an editable preview
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PurchaseUploadInput"
+      responses:
+        "200":
+          description: Editable purchase preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PurchasePreview"
+        "400": { description: Invalid or unreadable upload }
+        "401": { description: Authentication required }
+        "413": { description: Upload too large }
+        "415": { description: Unsupported upload type }
+        "429": { description: Too many upload analysis requests }
+  /inventory/purchases:
+    get:
+      operationId: listPurchases
+      tags: [inventory]
+      summary: Lists recorded purchase history
+      responses:
+        "200":
+          description: Purchase history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Purchase"
+        "401": { description: Authentication required }
+    post:
+      operationId: confirmPurchaseImport
+      tags: [inventory]
+      summary: Records an approved purchase and updates inventory atomically
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PurchaseImportInput"
+      responses:
+        "201":
+          description: Recorded purchase
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Purchase"
+        "400": { description: Invalid purchase }
+        "401": { description: Authentication required }
+  /sales:
+    get:
+      operationId: listSales
+      tags: [sales]
+      summary: Lists recent sales
+      responses:
+        "200":
+          description: Recent sales
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Sale"
+    post:
+      operationId: createSale
+      tags: [sales]
+      summary: Registers a sale and discounts stock atomically
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaleInput"
+      responses:
+        "201":
+          description: Registered sale
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sale"
+        "400": { description: Invalid sale or insufficient stock }
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /market/radar:
+    get:
+      operationId: getMarketRadar
+      tags: [market]
+      summary: Returns the current JB market radar
+      responses:
+        "200":
+          description: Current watchlist signals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketRadar"
+  /market/emerging-ideas:
+    get:
+      operationId: getEmergingMarketIdeas
+      tags: [market]
+      summary: Returns ranked emerging-market ETF research ideas
+      description: >
+        Public, cached research ideas from a fixed emerging-market ETF universe.
+        This is not investment advice. Yahoo Finance is the source and unavailable
+        values are returned as null.
+      parameters:
+        - name: refresh
+          in: query
+          required: false
+          schema: { type: boolean, default: false }
+      responses:
+        "200":
+          description: Emerging-market ETF research ideas (at most five)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmergingMarketIdeas"
+        "503": { description: Emerging-market data temporarily unavailable }
+  /market/search:
+    get:
+      operationId: searchMarketInstruments
+      tags: [market]
+      summary: Searches Yahoo Finance for ETFs and stocks
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minLength: 2, maxLength: 40 }
+      responses:
+        "200":
+          description: Matching instruments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MarketSearchResult"
+        "503": { description: Search temporarily unavailable }
+        "400": { description: Invalid search query }
+  /market/activity:
+    get:
+      operationId: getMarketActivity
+      tags: [market]
+      summary: Returns recent signal changes
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MarketActivity"
+  /watchlist:
+    get:
+      operationId: getWatchlist
+      tags: [watchlist]
+      summary: Returns the signed-in user's watchlist
+      responses:
+        "200":
+          description: Personal watchlist
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WatchlistItem"
+        "401": { description: Authentication required }
+    post:
+      operationId: addWatchlistItem
+      tags: [watchlist]
+      summary: Adds a symbol to the signed-in user's watchlist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WatchlistItemInput"
+      responses:
+        "201":
+          description: Added item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WatchlistItem"
+        "400": { description: Invalid symbol }
+        "401": { description: Authentication required }
+  /watchlist/radar:
+    get:
+      operationId: getWatchlistRadar
+      tags: [watchlist]
+      summary: Returns the signed-in user's calculated JB radar
+      responses:
+        "200":
+          description: Personal JB radar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketRadar"
+        "401": { description: Authentication required }
+  /watchlist/{ticker}:
+    delete:
+      operationId: removeWatchlistItem
+      tags: [watchlist]
+      summary: Removes a symbol from the signed-in user's watchlist
+      parameters:
+        - name: ticker
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204": { description: Removed }
+        "400": { description: Invalid symbol }
+        "401": { description: Authentication required }
+  /alerts/preferences:
+    get:
+      operationId: getAlertPreferences
+      tags: [alerts]
+      summary: Returns the signed-in user's alert preferences
+      responses:
+        "200":
+          description: Alert preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertPreferences"
+        "401": { description: Authentication required }
+    put:
+      operationId: updateAlertPreferences
+      tags: [alerts]
+      summary: Creates or updates WhatsApp alert preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AlertPreferencesInput"
+      responses:
+        "200":
+          description: Saved preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertPreferences"
+        "400": { description: Invalid preference values }
+        "401": { description: Authentication required }
+  /alerts/deliveries:
+    get:
+      operationId: getAlertDeliveries
+      tags: [alerts]
+      summary: Returns recent WhatsApp alert delivery attempts
+      responses:
+        "200":
+          description: Recent delivery attempts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AlertDelivery"
+        "401": { description: Authentication required }
+  /alerts/test:
+    post:
+      operationId: sendTestAlert
+      tags: [alerts]
+      summary: Sends a test WhatsApp alert to the signed-in user's saved number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AlertTestInput"
+      responses:
+        "200":
+          description: Test attempt result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertTestResponse"
+        "400": { description: "Missing consent, number, or enabled alerts" }
+        "401": { description: Authentication required }
+components:
+  schemas:
+    Product:
+      type: object
+      properties:
+        id: { type: string }
+        sku: { type: string }
+        name: { type: string }
+        category: { type: string }
+        description: { type: string }
+        cost: { type: number }
+        price: { type: number }
+        stock: { type: number, minimum: 0 }
+        lowStockThreshold: { type: number, minimum: 0 }
+        imagePath: { type: ["string", "null"] }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+      required: [id, sku, name, category, description, cost, price, stock, lowStockThreshold, imagePath, createdAt, updatedAt]
+    ProductInput:
+      type: object
+      properties:
+        sku: { type: string, minLength: 1, maxLength: 40 }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        category: { type: string, minLength: 1, maxLength: 80 }
+        description: { type: string, maxLength: 500 }
+        cost: { type: number, minimum: 0 }
+        price: { type: number, minimum: 0 }
+        stock: { type: number, minimum: 0 }
+        lowStockThreshold: { type: number, minimum: 0 }
+        imagePath: { type: ["string", "null"] }
+      required: [sku, name, category, description, cost, price, stock, lowStockThreshold, imagePath]
+    ProductUpdate:
+      type: object
+      properties:
+        sku: { type: string, minLength: 1, maxLength: 40 }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        category: { type: string, minLength: 1, maxLength: 80 }
+        description: { type: string, maxLength: 500 }
+        cost: { type: number, minimum: 0 }
+        price: { type: number, minimum: 0 }
+        stock: { type: number, minimum: 0 }
+        lowStockThreshold: { type: number, minimum: 0 }
+        imagePath: { type: ["string", "null"] }
+    UploadUrlRequest:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        size: { type: number, minimum: 1, maximum: 5242880 }
+        contentType:
+          type: string
+          enum: [image/jpeg, image/png, image/webp]
+      required: [name, size, contentType]
+    UploadUrlResponse:
+      type: object
+      properties:
+        uploadURL: { type: string }
+        objectPath: { type: string }
+      required: [uploadURL, objectPath]
+    FinalizeUploadRequest:
+      type: object
+      properties:
+        objectPath: { type: string, minLength: 1 }
+      required: [objectPath]
+    FinalizeUploadResponse:
+      type: object
+      properties:
+        objectPath: { type: string }
+      required: [objectPath]
+    SaleItemInput:
+      type: object
+      properties:
+        productId: { type: string }
+        quantity: { type: number, minimum: 1 }
+      required: [productId, quantity]
+    SaleInput:
+      type: object
+      properties:
+        paymentMethod:
+          type: string
+          enum: [Efectivo, Tarjeta, Transferencia, Pago móvil]
+        amountReceived: { type: ["number", "null"], minimum: 0 }
+        customerName: { type: string, minLength: 1, maxLength: 120 }
+        customerIdNumber: { type: string, minLength: 1, maxLength: 40 }
+        customerPhone: { type: string, minLength: 1, maxLength: 40 }
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/SaleItemInput"
+      required: [paymentMethod, amountReceived, customerName, customerIdNumber, customerPhone, items]
+    SaleItem:
+      type: object
+      properties:
+        id: { type: string }
+        productId: { type: string }
+        productName: { type: string }
+        quantity: { type: number }
+        unitPrice: { type: number }
+        unitCost: { type: number }
+        subtotal: { type: number }
+      required: [id, productId, productName, quantity, unitPrice, unitCost, subtotal]
+    Sale:
+      type: object
+      properties:
+        id: { type: string }
+        receiptNumber: { type: string }
+        paymentMethod: { type: string }
+        customerName: { type: string }
+        customerIdNumber: { type: string }
+        customerPhone: { type: string }
+        subtotal: { type: number }
+        total: { type: number }
+        amountReceived: { type: ["number", "null"] }
+        changeDue: { type: number }
+        createdAt: { type: string }
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SaleItem"
+      required: [id, receiptNumber, paymentMethod, customerName, customerIdNumber, customerPhone, subtotal, total, amountReceived, changeDue, createdAt, items]
+    PaymentTotal:
+      type: object
+      properties:
+        method: { type: string }
+        total: { type: number }
+      required: [method, total]
+    InventoryDashboard:
+      type: object
+      properties:
+        totalProducts: { type: number }
+        totalUnits: { type: number }
+        lowStockProducts: { type: number }
+        inventoryCostValue: { type: number }
+        inventorySaleValue: { type: number }
+        totalSold: { type: number }
+        salesToday: { type: number }
+        profitToday: { type: number }
+        paymentTotals:
+          type: array
+          items:
+            $ref: "#/components/schemas/PaymentTotal"
+      required: [totalProducts, totalUnits, lowStockProducts, inventoryCostValue, inventorySaleValue, totalSold, salesToday, profitToday, paymentTotals]
+    InventoryActivity:
+      type: object
+      properties:
+        id: { type: string }
+        kind: { type: string }
+        title: { type: string }
+        detail: { type: string }
+        amount: { type: ["number", "null"] }
+        createdAt: { type: string }
+      required: [id, kind, title, detail, amount, createdAt]
+    PurchaseUploadInput:
+      type: object
+      properties:
+        fileName: { type: string, minLength: 1, maxLength: 180 }
+        mimeType: { type: string, minLength: 1, maxLength: 120 }
+        dataBase64: { type: string, minLength: 1, maxLength: 14000000 }
+      required: [fileName, mimeType, dataBase64]
+    PurchasePreviewItem:
+      type: object
+      properties:
+        sku: { type: string, minLength: 1, maxLength: 40 }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        category: { type: string, minLength: 1, maxLength: 80 }
+        quantity: { type: number, minimum: 1 }
+        cost: { type: number, minimum: 0 }
+        price: { type: number, minimum: 0 }
+        updateCatalog: { type: boolean }
+        existingProductId: { type: ["string", "null"] }
+        status: { type: string, enum: [existing, new] }
+        missingFields:
+          type: array
+          items: { type: string, enum: [cost, price] }
+        warnings:
+          type: array
+          items: { type: string }
+      required: [sku, name, category, quantity, cost, price, updateCatalog, existingProductId, status, missingFields, warnings]
+    PurchasePreview:
+      type: object
+      properties:
+        fileName: { type: string }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/PurchasePreviewItem" }
+        warnings:
+          type: array
+          items: { type: string }
+      required: [fileName, items, warnings]
+    PurchaseImportItem:
+      type: object
+      properties:
+        sku: { type: string, minLength: 1, maxLength: 40 }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        category: { type: string, minLength: 1, maxLength: 80 }
+        quantity: { type: number, minimum: 1 }
+        cost: { type: number, minimum: 0 }
+        price: { type: number, minimum: 0 }
+        updateCatalog: { type: boolean }
+      required: [sku, name, category, quantity, cost, price, updateCatalog]
+    PurchaseImportInput:
+      type: object
+      properties:
+        sourceFileName: { type: string, minLength: 1, maxLength: 180 }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 2000
+          items: { $ref: "#/components/schemas/PurchaseImportItem" }
+      required: [sourceFileName, items]
+    PurchaseItem:
+      type: object
+      properties:
+        id: { type: string }
+        productId: { type: string }
+        productName: { type: string }
+        sku: { type: string }
+        category: { type: string }
+        quantity: { type: number }
+        unitCost: { type: number }
+        unitPrice: { type: number }
+        subtotal: { type: number }
+      required: [id, productId, productName, sku, category, quantity, unitCost, unitPrice, subtotal]
+    Purchase:
+      type: object
+      properties:
+        id: { type: string }
+        sourceFileName: { type: string }
+        totalCost: { type: number }
+        createdAt: { type: string }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/PurchaseItem" }
+      required: [id, sourceFileName, totalCost, createdAt, items]
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    MarketRadar:
+      type: object
+      properties:
+        marketStatus:
+          type: string
+        updatedAt:
+          type: string
+        source:
+          type: string
+        cached:
+          type: boolean
+        stale:
+          type: boolean
+          description: True when the response uses the last valid persisted reading because Yahoo Finance is temporarily unavailable.
+        errors:
+          type: array
+          items: { type: string }
+        assets:
+          type: array
+          items:
+            $ref: "#/components/schemas/MarketAsset"
+        summary:
+          $ref: "#/components/schemas/RadarSummary"
+      required: [marketStatus, updatedAt, source, cached, stale, errors, assets, summary]
+    EmergingMarketIdeas:
+      type: object
+      description: Ranked research ideas only; never an investment recommendation.
+      properties:
+        updatedAt: { type: string }
+        source: { type: string }
+        cached: { type: boolean }
+        stale: { type: boolean }
+        errors:
+          type: array
+          items: { type: string }
+        candidateUniverse:
+          type: array
+          items: { type: string }
+        candidatesEvaluated: { type: number, minimum: 0 }
+        ideas:
+          type: array
+          maxItems: 5
+          items:
+            $ref: "#/components/schemas/EmergingMarketIdea"
+      required: [updatedAt, source, cached, stale, errors, candidateUniverse, candidatesEvaluated, ideas]
+    EmergingMarketIdea:
+      type: object
+      description: One ETF to investigate; null means Yahoo Finance did not provide enough data.
+      properties:
+        ticker: { type: string }
+        name: { type: string }
+        historySessions: { type: number, minimum: 0 }
+        growthTrend:
+          type: ["string", "null"]
+          enum: ["Al alza", "Mixta", "A la baja", null]
+        return200Sessions: { type: ["number", "null"], description: Total price return across the last 200 valid trading sessions, in percent. }
+        dividendYield: { type: ["number", "null"], description: Yahoo Finance dividend yield, in percent. }
+        peRatio: { type: ["number", "null"], description: Yahoo Finance trailing P/E. }
+        profitMargin: { type: ["number", "null"], description: Yahoo Finance net profit margin, in percent. }
+        score: { type: ["number", "null"], description: Transparent ranking score derived only from available 200-session return and trend. }
+        rank: { type: ["number", "null"], minimum: 1, maximum: 5 }
+        source: { type: string }
+        updatedAt: { type: string }
+      required: [ticker, name, historySessions, growthTrend, return200Sessions, dividendYield, peRatio, profitMargin, score, rank, source, updatedAt]
+    MarketAsset:
+      type: object
+      properties:
+        ticker: { type: string }
+        name: { type: string }
+        type: { type: string }
+        price: { type: number }
+        quoteUpdatedAt: { type: ["string", "null"] }
+        change: { type: ["number", "null"] }
+        rsi: { type: ["number", "null"] }
+        sma20: { type: ["number", "null"] }
+        sma50: { type: ["number", "null"] }
+        sma100: { type: ["number", "null"] }
+        sma200: { type: ["number", "null"] }
+        pointsSma: { type: ["number", "null"] }
+        pointsRsi: { type: ["number", "null"] }
+        level: { type: ["number", "null"] }
+        signal: { type: string }
+        position: { type: string }
+        trend: { type: string }
+        historyDays: { type: number, minimum: 0, description: Trading sessions with valid daily closes returned by Yahoo Finance. }
+        sparkline:
+          type: array
+          items: { type: number }
+        history:
+          description: Historical points with a valid Yahoo Finance date and close; incomplete rows are omitted and mismatched date/close arrays are rejected.
+          type: array
+          items:
+            $ref: "#/components/schemas/MarketHistoryPoint"
+      required: [ticker, name, type, price, quoteUpdatedAt, change, rsi, sma20, sma50, sma100, sma200, pointsSma, pointsRsi, level, signal, position, trend, historyDays, sparkline, history]
+    MarketHistoryPoint:
+      type: object
+      properties:
+        date: { type: string, description: Trading date in ISO 8601 calendar format }
+        close: { type: number, description: Closing price for the trading date }
+        sma20: { type: ["number", "null"] }
+        sma50: { type: ["number", "null"] }
+        sma100: { type: ["number", "null"] }
+        sma200: { type: ["number", "null"] }
+      required: [date, close, sma20, sma50, sma100, sma200]
+    MarketSearchResult:
+      type: object
+      properties:
+        ticker: { type: string }
+        name: { type: string }
+        type: { type: string }
+        available: { type: boolean }
+        analysisReady: { type: boolean, description: True when Yahoo Finance supplied enough daily closes for the complete JB calculation. }
+        historyDays: { type: number, minimum: 0, description: Valid daily closes available from Yahoo Finance. }
+      required: [ticker, name, type, available, analysisReady, historyDays]
+    RadarSummary:
+      type: object
+      properties:
+        total: { type: number }
+        opportunities: { type: number }
+        watch: { type: number }
+        avoid: { type: number }
+      required: [total, opportunities, watch, avoid]
+    MarketActivity:
+      type: object
+      properties:
+        id: { type: string }
+        ticker: { type: string }
+        title: { type: string }
+        detail: { type: string }
+        kind: { type: string }
+        time: { type: string }
+      required: [id, ticker, title, detail, kind, time]
+    WatchlistItem:
+      type: object
+      properties:
+        ticker: { type: string }
+        createdAt: { type: string }
+      required: [ticker, createdAt]
+    WatchlistItemInput:
+      type: object
+      properties:
+        ticker: { type: string, minLength: 1, maxLength: 12 }
+      required: [ticker]
+    AlertPreferences:
+      type: object
+      properties:
+        phoneE164: { type: ["string", "null"] }
+        consent: { type: boolean }
+        enabled: { type: boolean }
+        signalChanges: { type: boolean }
+        opportunityAlerts: { type: boolean }
+        updatedAt: { type: string }
+      required: [phoneE164, consent, enabled, signalChanges, opportunityAlerts, updatedAt]
+    AlertPreferencesInput:
+      type: object
+      properties:
+        phoneE164: { type: ["string", "null"] }
+        consent: { type: boolean }
+        enabled: { type: boolean }
+        signalChanges: { type: boolean }
+        opportunityAlerts: { type: boolean }
+      required: [phoneE164, consent, enabled, signalChanges, opportunityAlerts]
+    AlertDelivery:
+      type: object
+      properties:
+        id: { type: string }
+        ticker: { type: string }
+        signal: { type: string }
+        level: { type: number }
+        status: { type: string }
+        createdAt: { type: string }
+      required: [id, ticker, signal, level, status, createdAt]
+    AlertTestInput:
+      type: object
+      additionalProperties: false
+    AlertTestResponse:
+      type: object
+      properties:
+        ticker: { type: string }
+        signal: { type: string }
+        level: { type: number }
+        status: { type: string }
+        message: { type: string }
+        preview: { type: string }
+      required: [ticker, signal, level, status, message, preview]
