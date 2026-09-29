@@ -401,7 +401,7 @@ export function AssetInsights({ ticker, price, fallbackHistory, dcaContent }: { 
       ? <Section title="Riesgo" subtitle="Cuánto oscila, cuánto ha llegado a caer y cómo se comporta frente al S&P 500.">
         <RiskLens analysis={analysis} period={period} history={periodHistory} />
       </Section>
-      : <Section title="Valor" subtitle={analysis.type === "ETF" ? "Costos, tamaño y composición del fondo." : "Valoración, calidad del negocio, dividendo y consenso de analistas."}>
+      : <Section title="Valor" subtitle={analysis.type === "ETF" ? "Costos, tamaño y composición del fondo." : "Valoración, calidad del negocio y dividendo."}>
         <ValueLens analysis={analysis} price={price} />
       </Section>)}
     {analysis?.errors.length ? <p className="mt-2 text-[10px] text-muted-foreground">{analysis.errors.join(" ")}</p> : null}

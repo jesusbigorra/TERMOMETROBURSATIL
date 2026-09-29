@@ -50,6 +50,18 @@ rewrites `/api/*` to the API domain and everything else to `index.html`.
 - The 3 sales of 2026-09-08 (V-93817440, V-94567025, V-94643806) were missing from the Replit
   backup and were imported by hand on 2026-09-29. Payment method recorded as "Sin especificar".
 
+## Termómetro: per-asset analysis (Sept 2026)
+
+- `GET /api/market/analysis/:ticker` (`lib/asset-analysis.ts`): 5y daily history with adjusted
+  close, period returns (1M…5A) with CAGR vs SPY, risk windows (volatility, max drawdown, beta,
+  Sharpe with ^IRX as risk-free), dividends. CDN-cached 15 min.
+- Stock fundamentals come from SEC EDGAR company facts (`lib/sec-fundamentals.ts`), TTM = last
+  fiscal year + current YTD − prior YTD. Yahoo quoteSummary needs a cookie+crumb that Yahoo blocks
+  from Vercel IPs (429); `lib/yahoo-session.ts` backs off 30 min after a failure.
+- ETF expense ratio / holdings: no free server-side source yet; the Value tab links to Yahoo.
+- Frontend: `components/asset-insights.tsx` (period selector, returns table, DCA / Riesgo / Valor
+  tabs, DCA simulator with XIRR vs lump sum).
+
 ## Known gaps after leaving Replit
 
 - Product image uploads: `src/lib/objectStorage.ts` and `src/routes/storage.ts` call the Replit
