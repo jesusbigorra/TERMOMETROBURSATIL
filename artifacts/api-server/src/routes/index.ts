@@ -9,12 +9,12 @@ import watchlistRouter from "./watchlist";
 
 const router: IRouter = Router();
 
+router.use(adminImportRouter);
 router.use(healthRouter);
 router.use(inventoryRouter);
 router.use(storageRouter);
 router.use(marketRouter);
 router.use(watchlistRouter);
-router.use(adminImportRouter);
 router.use(alertsRouter);
 
 export default router;
