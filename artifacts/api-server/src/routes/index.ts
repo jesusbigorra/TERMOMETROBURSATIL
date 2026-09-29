@@ -14,7 +14,7 @@ router.use(inventoryRouter);
 router.use(storageRouter);
 router.use(marketRouter);
 router.use(watchlistRouter);
-router.use(alertsRouter);
 router.use(adminImportRouter);
+router.use(alertsRouter);
 
 export default router;
