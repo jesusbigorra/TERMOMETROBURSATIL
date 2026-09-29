@@ -3,12 +3,13 @@ import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/reac
 import { getGetAlertDeliveriesQueryKey, getGetAlertPreferencesQueryKey, getGetEmergingMarketIdeasQueryKey, getGetMarketActivityQueryKey, getGetMarketRadarQueryKey, getGetWatchlistQueryKey, getGetWatchlistRadarQueryKey, useAddWatchlistItem, useGetAlertDeliveries, useGetAlertPreferences, useGetEmergingMarketIdeas, useGetMarketActivity, useGetMarketRadar, useGetWatchlist, useGetWatchlistRadar, useHealthCheck, useRemoveWatchlistItem, useSearchMarketInstruments, useSendTestAlert, useUpdateAlertPreferences } from "@workspace/api-client-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { AssetInsights } from "@/components/asset-insights";
+import { RecommendedSection } from "@/components/recommended";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Activity as ActivityIcon, Archive, ArrowDownRight, ArrowUpRight, BarChart3, BellRing, Check, ChevronDown, CircleHelp, Clock3, Download, ExternalLink, Filter, Gauge, Gem, Globe2, LayoutDashboard, LogIn, LogOut, Moon, MoreHorizontal, PanelLeftClose, Plus, Printer, Radio, RefreshCw, Search, ShieldAlert, SlidersHorizontal, Sparkles, Sun, TrendingDown, TrendingUp, Wifi, X } from "lucide-react";
+import { Star, Activity as ActivityIcon, Archive, ArrowDownRight, ArrowUpRight, BarChart3, BellRing, Check, ChevronDown, CircleHelp, Clock3, Download, ExternalLink, Filter, Gauge, Gem, Globe2, LayoutDashboard, LogIn, LogOut, Moon, MoreHorizontal, PanelLeftClose, Plus, Printer, Radio, RefreshCw, Search, ShieldAlert, SlidersHorizontal, Sparkles, Sun, TrendingDown, TrendingUp, Wifi, X } from "lucide-react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Route, Switch, useLocation, Router as WouterRouter } from "wouter";
-import { ClerkProvider, Show, SignIn, SignUp, useAuth, useClerk } from "@clerk/react";
+import { ClerkProvider, Show, SignIn, SignUp, useAuth, useClerk, useUser } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 
 const queryClient = new QueryClient({
@@ -587,8 +588,63 @@ function RefreshControl({ loading, onRefresh }: { loading: boolean; onRefresh: (
 function Sidebar({ isDark, setIsDark }: { isDark: boolean; setIsDark: (value: boolean) => void }) {
   const [guideExpanded, setGuideExpanded] = useState(false);
   const [quietMode, setQuietMode] = useState(false);
+  const { isSignedIn } = useAuth();
+  const { user } = useUser();
+  const { signOut } = useClerk();
+  const asideRef = useRef<HTMLElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const lockUntil = useRef(0);
+  const [active, setActive] = useState("overview");
+  const navItems = useMemo(() => [
+    { key: "overview", label: "Vista general", icon: LayoutDashboard, target: null as string | null },
+    { key: "signals", label: "Señales JB", icon: BarChart3, target: "signals" },
+    { key: "recommended", label: "Recomendadas", icon: Star, target: "recommended" },
+    { key: "watchlist", label: "Mi watchlist", icon: SlidersHorizontal, target: isSignedIn ? "radar-main" : "watchlist" },
+    { key: "ideas", label: "Ideas emergentes", icon: Sparkles, target: "emerging-ideas" },
+    ...(isSignedIn ? [{ key: "alerts", label: "Alertas", icon: BellRing, target: "watchlist" }] : []),
+  ], [isSignedIn]);
+  // Height of the sticky mobile bar, so sections are not hidden under it.
+  const headerOffset = () => (window.matchMedia("(min-width: 1024px)").matches ? 16 : (asideRef.current?.offsetHeight ?? 0) + 12);
+  const goTo = (key: string, target: string | null) => {
+    setActive(key);
+    lockUntil.current = Date.now() + 900;
+    const element = target ? document.getElementById(target) : null;
+    const top = element ? element.getBoundingClientRect().top + window.scrollY - headerOffset() : 0;
+    window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+  };
+  useEffect(() => {
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      if (Date.now() < lockUntil.current) return;
+      const line = headerOffset() + 60;
+      let current = "overview";
+      let best = -Infinity;
+      for (const item of navItems) {
+        if (!item.target) continue;
+        const element = document.getElementById(item.target);
+        if (!element) continue;
+        const top = element.getBoundingClientRect().top;
+        if (top <= line && top > best) { best = top; current = item.key; }
+      }
+      setActive(current);
+    };
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(update); };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    update();
+    return () => { window.removeEventListener("scroll", onScroll); window.removeEventListener("resize", onScroll); if (frame) cancelAnimationFrame(frame); };
+  }, [navItems]);
+  // On phones the tab row scrolls sideways: keep the active tab in view.
+  useEffect(() => {
+    const nav = navRef.current;
+    const button = nav?.querySelector<HTMLElement>(`[data-nav="${active}"]`);
+    if (!nav || !button || nav.scrollWidth <= nav.clientWidth) return;
+    nav.scrollTo({ left: button.offsetLeft - nav.clientWidth / 2 + button.offsetWidth / 2, behavior: "smooth" });
+  }, [active]);
+  const email = user?.primaryEmailAddress?.emailAddress ?? "";
   return (
-    <aside className={`flex w-full flex-col border-b border-sidebar-border bg-sidebar px-5 py-4 text-sidebar-foreground transition-opacity duration-300 lg:fixed lg:inset-y-0 lg:left-0 lg:w-[238px] lg:border-b-0 lg:border-r lg:px-4 lg:py-6 ${quietMode ? "opacity-75" : ""}`}>
+    <aside ref={asideRef} className={`sticky top-0 z-40 flex w-full flex-col border-b border-sidebar-border bg-sidebar px-5 py-3 text-sidebar-foreground shadow-sm transition-opacity duration-300 lg:fixed lg:py-6 lg:shadow-none lg:inset-y-0 lg:left-0 lg:w-[238px] lg:border-b-0 lg:border-r lg:px-4 ${quietMode ? "opacity-75" : ""}`}>
       <div className="flex items-center justify-between lg:block">
         <div className="flex items-center gap-3">
           <div className="brand-mark"><span>JB</span><i /></div>
@@ -600,13 +656,19 @@ function Sidebar({ isDark, setIsDark }: { isDark: boolean; setIsDark: (value: bo
         <button type="button" onClick={() => setQuietMode((mode) => !mode)} className="hidden rounded-lg p-2 text-sidebar-foreground/50 hover:bg-sidebar-accent lg:block" aria-label="Atenuar navegación" aria-pressed={quietMode}>
           <PanelLeftClose className="h-4 w-4" />
         </button>
+        <div className="flex items-center gap-1 lg:hidden">
+          {isSignedIn && <button type="button" onClick={() => void signOut({ redirectUrl: basePath || "/" })} className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-[11px] font-bold text-sidebar-foreground/70 hover:bg-sidebar-accent" aria-label="Cerrar sesión"><LogOut className="h-4 w-4" /> Cerrar sesión</button>}
+          <button type="button" onClick={() => setIsDark(!isDark)} className="rounded-lg p-2 text-sidebar-foreground/60 hover:bg-sidebar-accent" aria-label="Cambiar modo de color">
+            {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
       <div className="mt-7 hidden text-[10px] font-bold uppercase tracking-[0.18em] text-sidebar-foreground/40 lg:block">Radar</div>
-      <nav className="mt-3 flex gap-2 overflow-x-auto lg:block lg:space-y-1">
-        <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="sidebar-link sidebar-link-active"><LayoutDashboard className="h-4 w-4" /> Vista general</button>
-        <button type="button" onClick={() => document.getElementById("signals")?.scrollIntoView({ behavior: "smooth" })} className="sidebar-link"><BarChart3 className="h-4 w-4" /> Señales JB</button>
-        <button type="button" onClick={() => document.getElementById("emerging-ideas")?.scrollIntoView({ behavior: "smooth" })} className="sidebar-link"><Sparkles className="h-4 w-4" /> Ideas emergentes</button>
-        <button type="button" onClick={() => document.getElementById("watchlist")?.scrollIntoView({ behavior: "smooth" })} className="sidebar-link"><SlidersHorizontal className="h-4 w-4" /> Mi watchlist</button>
+      <nav ref={navRef} className="mt-3 flex gap-2 overflow-x-auto scrollbar-none lg:block lg:space-y-1" aria-label="Secciones">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          return <button key={item.key} type="button" data-nav={item.key} aria-current={active === item.key ? "true" : undefined} onClick={() => goTo(item.key, item.target)} className={`sidebar-link${active === item.key ? " sidebar-link-active" : ""}`}><Icon className="h-4 w-4" /> {item.label}</button>;
+        })}
       </nav>
       <div className="mt-auto hidden space-y-3 lg:block">
         <div className="rounded-2xl border border-sidebar-border bg-sidebar-accent/50 p-3">
@@ -615,6 +677,10 @@ function Sidebar({ isDark, setIsDark }: { isDark: boolean; setIsDark: (value: bo
           {guideExpanded && <p className="mt-2 border-t border-sidebar-border pt-2 text-[11px] leading-relaxed text-sidebar-foreground/55">Busca niveles bajos con RSI contenido y espera confirmación de tendencia. La paciencia también es una posición.</p>}
           <button type="button" onClick={() => setGuideExpanded((expanded) => !expanded)} className="mt-3 text-[11px] font-bold text-sidebar-primary hover:underline" aria-expanded={guideExpanded}>{guideExpanded ? "Cerrar guía" : "Abrir guía"} <ArrowUpRight className="ml-1 inline h-3 w-3" /></button>
         </div>
+        {isSignedIn && <div className="rounded-2xl border border-sidebar-border p-3">
+          <p className="truncate text-[11px] text-sidebar-foreground/55" title={email}>{email || "Sesión iniciada"}</p>
+          <button type="button" onClick={() => void signOut({ redirectUrl: basePath || "/" })} className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-sidebar-accent px-3 py-2 text-xs font-bold text-sidebar-foreground hover:opacity-90"><LogOut className="h-3.5 w-3.5" /> Cerrar sesión</button>
+        </div>}
         <div className="flex items-center justify-between border-t border-sidebar-border pt-4">
            <span className="flex items-center gap-2 text-xs text-sidebar-foreground/55"><span className="h-1.5 w-1.5 rounded-full bg-sidebar-primary" /> Datos Yahoo Finance</span>
           <button type="button" onClick={() => setIsDark(!isDark)} className="rounded-lg p-2 text-sidebar-foreground/55 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground" aria-label="Cambiar modo de color">
@@ -622,9 +688,6 @@ function Sidebar({ isDark, setIsDark }: { isDark: boolean; setIsDark: (value: bo
           </button>
         </div>
       </div>
-      <button type="button" onClick={() => setIsDark(!isDark)} className="ml-auto rounded-lg p-2 text-sidebar-foreground/60 hover:bg-sidebar-accent lg:hidden" aria-label="Cambiar modo de color">
-        {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-      </button>
     </aside>
   );
 }
@@ -1183,7 +1246,7 @@ Nivel JB: 82/100`;
 
 function AccountControl() {
   const { signOut } = useClerk();
-  return <><Show when="signed-out"><a href={`${basePath}/sign-in`} className="inline-flex h-9 items-center gap-2 rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground"><LogIn className="h-3.5 w-3.5" /> Entrar</a></Show><Show when="signed-in"><button type="button" onClick={() => void signOut({ redirectUrl: basePath || "/" })} className="inline-flex h-9 items-center gap-2 rounded-xl border border-card-border bg-card px-3 text-xs font-bold text-muted-foreground hover:bg-secondary"><LogOut className="h-3.5 w-3.5" /> Salir</button></Show></>;
+  return <><Show when="signed-out"><a href={`${basePath}/sign-in`} className="inline-flex h-9 items-center gap-2 rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground"><LogIn className="h-3.5 w-3.5" /> Entrar</a></Show><Show when="signed-in"><button type="button" onClick={() => void signOut({ redirectUrl: basePath || "/" })} className="inline-flex h-9 items-center gap-2 rounded-xl border border-card-border bg-card px-3 text-xs font-bold text-muted-foreground hover:bg-secondary"><LogOut className="h-3.5 w-3.5" /> Cerrar sesión</button></Show></>;
 }
 
 function Dashboard() {
@@ -1221,6 +1284,14 @@ function Dashboard() {
   const personalAssets = (personalRadarQuery.data?.assets ?? []) as Asset[];
   const baseTickers = useMemo(() => new Set(assets.map((asset) => asset.ticker)), [assets]);
   const personalTickers = useMemo(() => new Set(personalAssets.map((asset) => asset.ticker)), [personalAssets]);
+  const addWatchMutation = useAddWatchlistItem();
+  const addToWatchlist = async (ticker: string) => {
+    await addWatchMutation.mutateAsync({ data: { ticker } });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: watchlistRadarKey }),
+      queryClient.invalidateQueries({ queryKey: scopeUserQuery(getGetWatchlistQueryKey(), userId) }),
+    ]);
+  };
   const visibleAssets = useMemo(() => {
     if (!isSignedIn || !userId) return assets;
     return personalAssets;
@@ -1252,7 +1323,7 @@ function Dashboard() {
   };
 
   return (
-    <div className="min-h-[100dvh] overflow-x-hidden bg-background">
+    <div className="min-h-[100dvh] overflow-x-clip bg-background">
       <Sidebar isDark={isDark} setIsDark={setIsDark} />
       <main className="min-h-[100dvh] min-w-0 lg:ml-[238px]">
         <div className="mx-auto min-w-0 max-w-[1480px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
@@ -1293,6 +1364,8 @@ function Dashboard() {
                 {rsiData.length ? <ResponsiveContainer width="100%" height={232}><BarChart data={rsiData} layout="vertical" margin={{ top: 5, right: 12, left: 4, bottom: 5 }}><CartesianGrid horizontal={false} stroke="hsl(var(--border))" strokeDasharray="2 3" /><XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} /><YAxis dataKey="ticker" type="category" width={48} tick={{ fontSize: 10, fill: "hsl(var(--foreground))", fontFamily: "DM Mono" }} axisLine={false} tickLine={false} /><Tooltip cursor={{ fill: "hsl(var(--secondary))" }} contentStyle={{ borderRadius: 12, border: "1px solid #d9ddd8", fontSize: 12, background: "#fbfaf6" }} formatter={(value: number) => [formatNumber(value, 0), "RSI"]} /><Bar dataKey="rsi" radius={[0, 5, 5, 0]} isAnimationActive={false}>{rsiData.map((item) => <Cell key={item.ticker} fill={isDcaRsiRange(item.rsi) ? CHART_COLORS.teal : item.rsi < DCA_RSI_MIN ? CHART_COLORS.coral : item.rsi > 65 ? CHART_COLORS.red : CHART_COLORS.amber} />)}</Bar></BarChart></ResponsiveContainer> : <div className="flex h-[232px] items-center justify-center text-sm text-muted-foreground">Sin lectura RSI.</div>}
               </ChartCard>
             </div>
+
+            <RecommendedSection signedIn={Boolean(isSignedIn)} owned={personalTickers} onAdd={addToWatchlist} signInHref={`${basePath}/sign-in`} />
 
             <div className="grid grid-cols-1 scroll-mt-6 gap-5 xl:grid-cols-[1.5fr_.72fr]">
                <RadarTable key={userId ?? "anonymous"} assets={visibleAssets} loading={loading} baseTickers={isSignedIn ? new Set<string>() : baseTickers} personalTickers={personalTickers} />

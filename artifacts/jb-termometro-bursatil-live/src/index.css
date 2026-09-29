@@ -122,11 +122,11 @@
 
 @layer base {
   * { @apply border-border; }
-  html { background: hsl(var(--background)); overflow-x: hidden; }
+  html { background: hsl(var(--background)); overflow-x: clip; }
   body {
     @apply font-sans antialiased bg-background text-foreground;
     margin: 0;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
   button, a { -webkit-tap-highlight-color: transparent; }
 }
@@ -258,3 +258,6 @@ body::after {
   .break-avoid { break-inside: avoid; }
   * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 }
+/* Horizontal tab row on phones: scrollable without a visible bar. */
+.scrollbar-none { scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
