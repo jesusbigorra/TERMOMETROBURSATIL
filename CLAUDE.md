@@ -41,6 +41,14 @@ rewrites `/api/*` to the API domain and everything else to `index.html`.
   `CLERK_PUBLISHABLE_KEY`, `NODE_ENV=production`, Vercel Blob store (`BLOB_STORE_ID`).
 - Frontends: `VITE_CLERK_PUBLISHABLE_KEY`.
 - Clerk still uses test keys (`pk_test_...`).
+- `INVENTORY_ALLOWED_EMAILS` (API): comma-separated emails allowed to use the inventory and cash
+  register. Enforced by `middlewares/requireInventoryUser.ts` on `/inventory`, `/sales` and
+  `/storage/uploads`. The termómetro stays open to any signed-in user (email or Google).
+
+## Data notes
+
+- The 3 sales of 2026-09-08 (V-93817440, V-94567025, V-94643806) were missing from the Replit
+  backup and were imported by hand on 2026-09-29. Payment method recorded as "Sin especificar".
 
 ## Known gaps after leaving Replit
 

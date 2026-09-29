@@ -32,6 +32,7 @@ import {
   salesTable,
 } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
+import { requireInventoryUser } from "../middlewares/requireInventoryUser";
 import {
   completePurchasePreview,
   groupPurchaseItems,
@@ -48,6 +49,8 @@ import {
 } from "./inventory-upload";
 
 const router: IRouter = Router();
+// Path-scoped so it does not affect other routers mounted at the same root.
+router.use(["/inventory", "/sales"], requireInventoryUser);
 const money = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
 const uploadLimitBytes = 10 * 1024 * 1024;
 const uploadAttempts = new Map<string, number[]>();

@@ -38,8 +38,8 @@ function Router() {
       <Route>
         <Shell>
           <Switch>
-        <Route path="/" component={DashboardPage} />
-        <Route path="/productos" component={ProductsPage} />
+        <Route path="/"><Protected><DashboardPage /></Protected></Route>
+        <Route path="/productos"><Protected><ProductsPage /></Protected></Route>
         <Route path="/vender"><Protected><SellPage /></Protected></Route>
         <Route path="/ventas"><Protected><SalesPage /></Protected></Route>
         <Route component={NotFound} />

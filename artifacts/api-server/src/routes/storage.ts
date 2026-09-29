@@ -13,9 +13,11 @@ import {
 import { ObjectPermission } from '../lib/objectAcl';
 import { requireAuth, type AuthenticatedRequest } from '../middlewares/requireAuth';
 import { validateProductImageContent } from './inventory-upload';
+import { requireInventoryUser } from '../middlewares/requireInventoryUser';
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
+router.use('/storage/uploads', requireInventoryUser);
 
 /**
  * POST /storage/uploads/request-url
