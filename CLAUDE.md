@@ -62,12 +62,24 @@ rewrites `/api/*` to the API domain and everything else to `index.html`.
 - Frontend: `components/asset-insights.tsx` (period selector, returns table, DCA / Riesgo / Valor
   tabs, DCA simulator with XIRR vs lump sum).
 
+## Telegram alerts (Sept 2026)
+
+- Bot: @Termobursatilbot. Env (API): `TELEGRAM_BOT_TOKEN` (sensitive), `TELEGRAM_BOT_USERNAME`.
+  The webhook secret is derived from the token (`lib/telegram.ts`), so rotating the token only
+  needs the env var updated plus a redeploy; the webhook re-registers itself on the next call.
+- Tables `telegram_links` and `app_state` are created at runtime (`TELEGRAM_DDL`), no drizzle push needed.
+- Routes (`routes/telegram.ts`, mounted before watchlist/alerts): `/telegram/status|link|settings|test`
+  (signed in), `/telegram/webhook` (Telegram only), `/cron/alerts` (public, throttled to 1 run per 4 min,
+  only weekdays 13:15-21:30 UTC unless `?anytime=1`).
+- Scheduler: `.github/workflows/telegram-alerts.yml` calls `/api/cron/alerts` every 15 min.
+  GitHub pauses scheduled workflows after 60 days without repo activity.
+- Alert logic (`lib/alert-scheduler.ts`): compares each watchlist item's `last_signal` with the current
+  JB signal; linking resets `last_signal` so old changes are not sent. WhatsApp was removed.
+
 ## Known gaps after leaving Replit
 
 - Product image uploads: `src/lib/objectStorage.ts` and `src/routes/storage.ts` call the Replit
   sidecar (`127.0.0.1:1106`). Needs rewiring to Vercel Blob.
-- WhatsApp alerts: `src/lib/alert-scheduler.ts` uses `@replit/connectors-sdk`, and the 5-minute
-  scheduler in `src/index.ts` does not run on serverless. Needs a new provider plus a Vercel Cron.
 - XLSX purchase import (`routes/inventory-upload.ts`) resolves `exceljs` by path inside a worker,
   which may fail inside the bundle. Test before relying on it.
 
