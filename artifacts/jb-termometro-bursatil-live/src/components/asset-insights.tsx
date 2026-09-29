@@ -264,13 +264,14 @@ function ValueLens({ analysis, price }: { analysis: AssetAnalysis; price: number
     const top10 = analysis.topHoldings.reduce((sum, item) => sum + item.weight, 0);
     return <>
       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-        <Metric label="Comisión anual" value={pct(expense, 2, false)} note="Lo que cobra el fondo cada año sobre tu inversión" tone={band(expense, (x) => x <= 0.1, (x) => x > 0.6)} />
-        <Metric label="Tamaño del fondo" value={big(assets)} note="Fondos grandes: más liquidez y menor riesgo de cierre" tone={band(assets, (x) => x >= 10e9, (x) => x < 100e6)} />
+        {expense !== null && <Metric label="Comisión anual" value={pct(expense, 2, false)} note="Lo que cobra el fondo cada año sobre tu inversión" tone={band(expense, (x) => x <= 0.1, (x) => x > 0.6)} />}
+        {assets !== null && <Metric label="Tamaño del fondo" value={big(assets)} note="Fondos grandes: más liquidez y menor riesgo de cierre" tone={band(assets, (x) => x >= 10e9, (x) => x < 100e6)} />}
         <Metric label="Rendimiento por dividendo" value={pct(yieldPct, 2, false)} note={dividendNote} />
-        <Metric label="P/E de sus posiciones" value={n(v("holdingsPE"), 1)} note="Qué tan caras están, en promedio, las empresas que contiene" tone={band(v("holdingsPE"), (x) => x < 18, (x) => x > 32)} />
-        <Metric label="Concentración top 10" value={pct(top10 || null, 1, false)} note={top10 > 50 ? "Muy concentrado en pocas empresas" : top10 > 30 ? "Concentración moderada" : "Bien diversificado"} tone={band(top10 || null, (x) => x < 30, (x) => x > 55)} />
-        <Metric label="Categoría" value={s("category") ?? "—"} note={s("fundFamily") ? `Gestora: ${s("fundFamily")}` : "Tipo de fondo"} />
+        {v("holdingsPE") !== null && <Metric label="P/E de sus posiciones" value={n(v("holdingsPE"), 1)} note="Qué tan caras están, en promedio, las empresas que contiene" tone={band(v("holdingsPE"), (x) => x < 18, (x) => x > 32)} />}
+        {top10 > 0 && <Metric label="Concentración top 10" value={pct(top10, 1, false)} note={top10 > 50 ? "Muy concentrado en pocas empresas" : top10 > 30 ? "Concentración moderada" : "Bien diversificado"} tone={band(top10, (x) => x < 30, (x) => x > 55)} />}
+        {s("category") && <Metric label="Categoría" value={s("category")!} note={s("fundFamily") ? `Gestora: ${s("fundFamily")}` : "Tipo de fondo"} />}
       </div>
+      {expense === null && !analysis.topHoldings.length && <p className="mt-2 rounded-xl bg-card px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">La comisión, el tamaño y las posiciones del fondo no están disponibles desde nuestra fuente de datos. Puedes verlas en la <a className="font-bold text-primary underline" href={`https://finance.yahoo.com/quote/${encodeURIComponent(analysis.ticker)}/holdings/`} target="_blank" rel="noopener noreferrer">ficha del fondo en Yahoo Finance</a>.</p>}
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         {analysis.topHoldings.length > 0 && <div className="rounded-xl border border-card-border bg-card p-3">
           <p className="text-[11px] font-bold">Principales posiciones</p>
@@ -296,15 +297,15 @@ function ValueLens({ analysis, price }: { analysis: AssetAnalysis; price: number
   const upside = target !== null && price > 0 ? (target / price - 1) * 100 : null;
   const recommendation: Record<string, string> = { strong_buy: "Compra fuerte", buy: "Compra", hold: "Mantener", underperform: "Bajo rendimiento", sell: "Venta" };
   return <>
-    <p className="mt-3 text-[11px] text-muted-foreground">{[s("sector"), s("industry")].filter(Boolean).join(" · ")} · Capitalización {big(v("marketCap"))}</p>
+    <p className="mt-3 text-[11px] text-muted-foreground">{[s("sector"), s("industry"), `Capitalización ${big(v("marketCap"))}`].filter(Boolean).join(" · ")}</p>
     <p className="mt-3 text-[10px] font-bold uppercase tracking-[.12em] text-muted-foreground">Valoración</p>
     <div className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-3">
-      <Metric label="P/E (12 meses)" value={n(pe, 1)} note="Años de utilidades que pagas por la acción" tone={band(pe, (x) => x > 0 && x < 18, (x) => x > 35 || x <= 0)} />
-      <Metric label="P/E futuro" value={n(fpe, 1)} note={pe !== null && fpe !== null ? (fpe < pe ? "Menor que el actual: se esperan más utilidades" : "Mayor que el actual: se esperan menos utilidades") : "Con utilidades estimadas"} tone={band(fpe, (x) => x > 0 && x < 18, (x) => x > 35 || x <= 0)} />
-      <Metric label="PEG" value={n(v("pegRatio"), 2)} note="P/E ajustado por crecimiento; menos de 1 suele ser atractivo" tone={band(v("pegRatio"), (x) => x > 0 && x < 1, (x) => x > 2.5)} />
+      <Metric label="P/E (12 meses)" value={n(pe, 1)} note={v("trailingEps") !== null ? `Utilidad por acción 12 meses: ${money(v("trailingEps"))}` : "Años de utilidades que pagas por la acción"} tone={band(pe, (x) => x > 0 && x < 18, (x) => x > 35 || x <= 0)} />
+      {fpe !== null && <Metric label="P/E futuro" value={n(fpe, 1)} note={pe !== null && fpe !== null ? (fpe < pe ? "Menor que el actual: se esperan más utilidades" : "Mayor que el actual: se esperan menos utilidades") : "Con utilidades estimadas"} tone={band(fpe, (x) => x > 0 && x < 18, (x) => x > 35 || x <= 0)} />}
+      {v("pegRatio") !== null && <Metric label="PEG" value={n(v("pegRatio"), 2)} note="P/E ajustado por crecimiento; menos de 1 suele ser atractivo" tone={band(v("pegRatio"), (x) => x > 0 && x < 1, (x) => x > 2.5)} />}
       <Metric label="Precio / Ventas" value={n(v("priceToSales"), 2)} note="Cuánto pagas por cada dólar de ingresos" tone={band(v("priceToSales"), (x) => x < 3, (x) => x > 10)} />
       <Metric label="Precio / Valor en libros" value={n(v("priceToBook"), 2)} note="Precio frente al patrimonio contable" />
-      <Metric label="EV / EBITDA" value={n(v("evToEbitda"), 1)} note="Valor de la empresa frente a su caja operativa" tone={band(v("evToEbitda"), (x) => x > 0 && x < 12, (x) => x > 25)} />
+      {v("evToEbitda") !== null && <Metric label="EV / EBITDA" value={n(v("evToEbitda"), 1)} note="Valor de la empresa frente a su caja operativa" tone={band(v("evToEbitda"), (x) => x > 0 && x < 12, (x) => x > 25)} />}
     </div>
     <p className="mt-3 text-[10px] font-bold uppercase tracking-[.12em] text-muted-foreground">Calidad y crecimiento</p>
     <div className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -315,13 +316,13 @@ function ValueLens({ analysis, price }: { analysis: AssetAnalysis; price: number
       <Metric label="Liquidez corriente" value={n(v("currentRatio"), 2)} note="Activos de corto plazo por cada dólar de deudas de corto plazo" tone={band(v("currentRatio"), (x) => x >= 1.5, (x) => x < 1)} />
       <Metric label="Flujo de caja libre" value={big(v("freeCashflow"))} note="Caja que queda tras invertir en el negocio" tone={band(v("freeCashflow"), (x) => x > 0, (x) => x < 0)} />
     </div>
-    <p className="mt-3 text-[10px] font-bold uppercase tracking-[.12em] text-muted-foreground">Dividendo y analistas</p>
+    <p className="mt-3 text-[10px] font-bold uppercase tracking-[.12em] text-muted-foreground">Dividendo</p>
     <div className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-3">
       <Metric label="Rendimiento por dividendo" value={pct(yieldPct, 2, false)} note={`${dividendNote} · promedio 5 años ${pct(v("fiveYearAvgDividendYield"), 2, false)}`} />
       <Metric label="Pago sobre utilidades" value={pct(v("payoutRatio"), 0, false)} note="Qué parte de las utilidades se reparte" tone={band(v("payoutRatio"), (x) => x > 0 && x <= 60, (x) => x > 90)} />
-      <Metric label="Precio objetivo" value={money(target)} note={`${upside === null ? "—" : `${pct(upside, 1)} vs precio actual`} · ${v("analystCount") ?? "?"} analistas · ${recommendation[s("recommendation") ?? ""] ?? "sin consenso"}`} tone={band(upside, (x) => x >= 15, (x) => x < 0)} />
+      {target !== null && <Metric label="Precio objetivo" value={money(target)} note={`${upside === null ? "—" : `${pct(upside, 1)} vs precio actual`} · ${v("analystCount") ?? "?"} analistas · ${recommendation[s("recommendation") ?? ""] ?? "sin consenso"}`} tone={band(upside, (x) => x >= 15, (x) => x < 0)} />}
     </div>
-    <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">Los rangos de color son referencias generales: un P/E alto puede estar justificado en empresas de alto crecimiento. Úsalos para comparar, no como veredicto.</p>
+    <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">{s("source") === "SEC EDGAR" ? "Fuente: estados financieros oficiales presentados a la SEC. P/E y márgenes con los últimos 12 meses; crecimiento del último año fiscal completo. " : ""}Los rangos de color son referencias generales: un P/E alto puede estar justificado en empresas de alto crecimiento. Úsalos para comparar, no como veredicto.</p>
   </>;
 }
 

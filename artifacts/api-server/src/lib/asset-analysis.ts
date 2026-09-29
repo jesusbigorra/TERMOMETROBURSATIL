@@ -3,6 +3,7 @@
 // risk metrics and fundamentals. Everything is computed from Yahoo Finance data.
 import { logger } from "./logger";
 import { YAHOO_USER_AGENT, fetchYahooAuthed } from "./yahoo-session";
+import { getSecFundamentals } from "./sec-fundamentals";
 
 const BENCHMARK = "SPY";
 const RISK_FREE_TICKER = "^IRX"; // 13-week US T-bill yield, in percent
@@ -464,10 +465,12 @@ export async function getAssetAnalysis(rawTicker: string): Promise<AssetAnalysis
     const rate = riskFree.status === "fulfilled" ? riskFree.value : null;
     let fundamentals: FundamentalsResult = { values: {}, topHoldings: [], sectorWeights: [] };
     if (fundamentalsResult.status === "fulfilled") fundamentals = fundamentalsResult.value;
-    else {
-      errors.push("Fundamentales no disponibles en este momento.");
-      logger.warn({ err: fundamentalsResult.reason, ticker }, "Fundamentals unavailable");
-    }
+    else logger.info({ err: String(fundamentalsResult.reason), ticker }, "Yahoo fundamentals unavailable, using SEC");
+    const lastClose = series.close.at(-1)!;
+    const sec = await getSecFundamentals(ticker, lastClose);
+    const yahooValues = Object.fromEntries(Object.entries(fundamentals.values).filter(([, value]) => value !== null && value !== undefined));
+    fundamentals.values = { ...(sec ?? {}), ...yahooValues };
+    if (!Object.keys(yahooValues).length && !sec) fundamentals.values.source = null;
     const returns = dailyReturns(series.adjClose);
     const lastYearStart = Math.max(1, series.dates.length - TRADING_DAYS);
     let best: AssetAnalysis["bestDay"] = null;
@@ -481,6 +484,9 @@ export async function getAssetAnalysis(rawTicker: string): Promise<AssetAnalysis
     const oneYearAgo = shiftMonths(lastDate, 12);
     const trailing = series.dividends.filter((item) => item.date > oneYearAgo).reduce((sum, item) => sum + item.amount, 0);
     const history = buildHistory(series);
+    if ((fundamentals.values.dividendYield ?? null) === null && trailing > 0) {
+      fundamentals.values.dividendYield = round((trailing / series.close.at(-1)!) * 100);
+    }
     const meta = series.meta;
     const instrument = String(meta.instrumentType ?? "").toUpperCase();
     return {

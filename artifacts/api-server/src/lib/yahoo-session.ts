@@ -10,6 +10,8 @@ const SESSION_TTL_MS = 60 * 60 * 1000;
 type Session = { cookie: string; crumb: string; expiresAt: number };
 let session: Session | null = null;
 let pending: Promise<Session> | null = null;
+let failedAt = 0;
+const FAILURE_BACKOFF_MS = 30 * 60 * 1000;
 
 function extractCookies(response: Response): string {
   const headers = response.headers as Headers & { getSetCookie?: () => string[] };
@@ -71,11 +73,17 @@ async function createSession(): Promise<Session> {
 
 export async function getYahooSession(force = false): Promise<Session> {
   if (!force && session && session.expiresAt > Date.now()) return session;
+  // Yahoo often blocks cloud IPs; do not hammer it after a failure.
+  if (Date.now() - failedAt < FAILURE_BACKOFF_MS) throw new Error("Sesión de Yahoo en pausa tras un rechazo reciente");
   if (!pending) {
     pending = createSession()
       .then((created) => {
         session = created;
         return created;
+      })
+      .catch((error) => {
+        failedAt = Date.now();
+        throw error;
       })
       .finally(() => {
         pending = null;
