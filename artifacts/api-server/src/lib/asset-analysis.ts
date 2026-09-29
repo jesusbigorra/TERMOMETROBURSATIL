@@ -111,8 +111,12 @@ async function fetchSeries(ticker: string, range = "5y"): Promise<Series> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 9000);
   try {
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=${range}&interval=1d&events=div%2Csplit&includePrePost=false`;
-    const response = await fetch(url, { headers: { Accept: "application/json", "User-Agent": YAHOO_USER_AGENT }, signal: controller.signal });
+    const path = `/v8/finance/chart/${encodeURIComponent(ticker)}?range=${range}&interval=1d&events=div%2Csplit&includePrePost=false`;
+    // Same client id as the radar (which Yahoo accepts); on 429 retry the other host.
+    let response = await fetch(`https://query1.finance.yahoo.com${path}`, { headers: { Accept: "application/json", "User-Agent": "JB-Termometro/1.0" }, signal: controller.signal });
+    if (response.status === 429 || response.status >= 500) {
+      response = await fetch(`https://query2.finance.yahoo.com${path}`, { headers: { Accept: "application/json", "User-Agent": YAHOO_USER_AGENT }, signal: controller.signal });
+    }
     if (!response.ok) throw new Error(`Yahoo respondió ${response.status} para ${ticker}`);
     const json = (await response.json()) as {
       chart?: { result?: Array<{
