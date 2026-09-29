@@ -149,3 +149,37 @@ export async function sendAlert(chatId: string, alert: AlertContent): Promise<st
 export async function sendText(chatId: string | number, text: string, extra: Record<string, unknown> = {}): Promise<void> {
   await tg("sendMessage", { chat_id: chatId, text, parse_mode: "HTML", link_preview_options: { is_disabled: true }, ...extra });
 }
+
+export type DigestChange = {
+  ticker: string;
+  signal: string;
+  priorSignal: string | null;
+  level: number;
+  alreadyNotified: boolean;
+};
+
+const DIGEST_EMOJI: Record<string, string> = { Interesante: "🟢", "A considerar": "🟡", "Descartado de momento": "🔴" };
+const DIGEST_ORDER: Record<string, number> = { Interesante: 0, "A considerar": 1, "Descartado de momento": 2 };
+
+export async function sendDigest(chatId: string, changes: DigestChange[], options: { final: boolean }): Promise<void> {
+  const title = options.final ? "📋 <b>Resumen del día</b>" : "📋 <b>Resumen de hoy (hasta ahora)</b>";
+  if (!changes.length) {
+    await sendText(chatId, `${title}\n\nSin cambios de señal en tu watchlist hoy. Todo tranquilo 😌`, {
+      reply_markup: { inline_keyboard: [[{ text: "🌡️ Abrir Termómetro", url: APP_URL }]] },
+    });
+    return;
+  }
+  const sorted = changes.slice().sort((a, b) => (DIGEST_ORDER[a.signal] ?? 3) - (DIGEST_ORDER[b.signal] ?? 3) || b.level - a.level);
+  const lines = sorted.map((change) => {
+    const from = change.priorSignal ? ` (antes: ${escapeHtml(change.priorSignal)})` : "";
+    const note = change.alreadyNotified ? " · ya te avisé" : "";
+    return `${DIGEST_EMOJI[change.signal] ?? "⚪"} <b>${escapeHtml(change.ticker)}</b> → ${escapeHtml(change.signal)} · ${change.level}/100${from}${note}`;
+  });
+  const opportunities = sorted.filter((change) => change.signal === "Interesante").length;
+  const footer = opportunities
+    ? `\n\n${opportunities === 1 ? "1 activo quedó" : `${opportunities} activos quedaron`} en zona interesante.`
+    : "";
+  await sendText(chatId, `${title}\n\n${lines.join("\n")}${footer}`, {
+    reply_markup: { inline_keyboard: [[{ text: "🌡️ Abrir Termómetro", url: APP_URL }]] },
+  });
+}

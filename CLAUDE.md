@@ -70,11 +70,17 @@ rewrites `/api/*` to the API domain and everything else to `index.html`.
 - Tables `telegram_links` and `app_state` are created at runtime (`TELEGRAM_DDL`), no drizzle push needed.
 - Routes (`routes/telegram.ts`, mounted before watchlist/alerts): `/telegram/status|link|settings|test`
   (signed in), `/telegram/webhook` (Telegram only), `/cron/alerts` (public, throttled to 1 run per 4 min,
-  only weekdays 13:15-21:30 UTC unless `?anytime=1`).
+  weekdays 9:15-16:45 New York unless `?anytime=1`).
 - Scheduler: `.github/workflows/telegram-alerts.yml` calls `/api/cron/alerts` every 15 min.
   GitHub pauses scheduled workflows after 60 days without repo activity.
-- Alert logic (`lib/alert-scheduler.ts`): compares each watchlist item's `last_signal` with the current
-  JB signal; linking resets `last_signal` so old changes are not sent. WhatsApp was removed.
+- Alert logic (`lib/alert-scheduler.ts`), anti-noise rules agreed with Jesús:
+  instant message only when an asset ENTERS "Interesante"; a new signal must hold on 2 consecutive
+  checks; hysteresis (leave Interesante only if RSI > 42 or < 28, leave Descartado only if RSI < 62);
+  max 1 instant per asset per day and 3 per user per day; every other confirmed change goes to one
+  digest after 16:15 New York. `watchlist_items.last_signal` is the confirmed signal,
+  `pending_signal/pending_count` track confirmation. Prefs: `opportunity_alerts` = instant,
+  `signal_changes` = daily digest. Bot commands: /radar /resumen /prueba /silenciar /activar /desconectar.
+  Linking resets `last_signal` so old changes are not sent. WhatsApp was removed.
 
 ## Known gaps after leaving Replit
 

@@ -1,5 +1,8 @@
-// Serverless entry for Vercel: export the Express app as the request handler.
-// The long-running alert scheduler from index.ts does not run here.
 import app from "./app";
+import { ensureTelegramSchema } from "./lib/telegram";
+import { logger } from "./lib/logger";
+
+// Runtime DDL (new watchlist/telegram columns) must exist before any route selects them.
+await ensureTelegramSchema().catch((error) => logger.error({ err: error }, "Schema check failed"));
 
 export default app;

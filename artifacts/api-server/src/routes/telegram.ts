@@ -3,7 +3,7 @@ import { desc, eq } from "drizzle-orm";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { alertPreferencesTable, db, telegramLinksTable, watchlistItemsTable } from "@workspace/db";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
-import { claimAlertRun, evaluateAlerts, lastAlertRun } from "../lib/alert-scheduler";
+import { claimAlertRun, evaluateAlerts, lastAlertRun, marketWindowOpen, sendDailyDigest } from "../lib/alert-scheduler";
 import { getRadarForTickers } from "../lib/market-data";
 import { logger } from "../lib/logger";
 import {
@@ -40,17 +40,18 @@ function ensureWebhook(): Promise<void> {
           allowed_updates: ["message", "callback_query"],
           drop_pending_updates: true,
         });
-        await tg("setMyCommands", {
-          commands: [
-            { command: "radar", description: "Señales de tu watchlist ahora" },
-            { command: "silenciar", description: "Sin avisos hasta mañana" },
-            { command: "activar", description: "Volver a recibir avisos" },
-            { command: "ayuda", description: "Qué puedo hacer" },
-            { command: "desconectar", description: "Dejar de recibir alertas" },
-          ],
-        });
         logger.info({ url: WEBHOOK_URL }, "Telegram webhook registered");
       }
+      await tg("setMyCommands", {
+        commands: [
+          { command: "radar", description: "Señales de tu watchlist ahora" },
+          { command: "resumen", description: "Cambios de hoy hasta ahora" },
+          { command: "prueba", description: "Envíame un aviso de prueba" },
+          { command: "silenciar", description: "Sin avisos hasta mañana" },
+          { command: "activar", description: "Volver a recibir avisos" },
+          { command: "desconectar", description: "Dejar de recibir alertas" },
+        ],
+      });
     })().catch((error) => {
       webhookChecked = null;
       logger.warn({ err: error instanceof Error ? error.message : "unknown" }, "Telegram webhook setup failed");
@@ -143,35 +144,32 @@ router.post("/telegram/test", requireAuth, async (req: AuthenticatedRequest, res
     res.status(400).json({ error: "Primero conecta tu Telegram." });
     return;
   }
-  const [item] = await db.select({ ticker: watchlistItemsTable.ticker }).from(watchlistItemsTable).where(eq(watchlistItemsTable.userId, req.userId!)).orderBy(desc(watchlistItemsTable.createdAt)).limit(1);
-  const ticker = item?.ticker ?? "VOO";
-  const radar = await getRadarForTickers([ticker]).catch(() => null);
-  const asset = radar?.assets[0];
   try {
-    await sendAlert(link.chatId, {
-      ticker,
-      name: asset?.name,
-      signal: asset?.signal ?? "Interesante",
-      level: asset?.level ?? 80,
-      price: asset?.price,
-      change: asset?.change,
-      test: true,
-    });
+    await sendTestAlert(req.userId!, link.chatId);
     res.json({ ok: true, message: "Listo, revisa tu Telegram 📲" });
   } catch (error) {
     res.status(502).json({ error: `Telegram no aceptó el mensaje: ${error instanceof Error ? error.message : "error"}` });
   }
 });
 
-// ---------- Scheduler (called every ~15 min by GitHub Actions) ----------
-
-function marketWindowOpen(now = new Date()): boolean {
-  const day = now.getUTCDay();
-  if (day === 0 || day === 6) return false;
-  const minutes = now.getUTCHours() * 60 + now.getUTCMinutes();
-  // Covers the NYSE session in both EDT (13:30-20:00 UTC) and EST (14:30-21:00 UTC).
-  return minutes >= 13 * 60 + 15 && minutes <= 21 * 60 + 30;
+// Real data for the most recent watchlist asset, marked as a test.
+async function sendTestAlert(userId: string, chatId: string): Promise<void> {
+  const [item] = await db.select({ ticker: watchlistItemsTable.ticker }).from(watchlistItemsTable).where(eq(watchlistItemsTable.userId, userId)).orderBy(desc(watchlistItemsTable.createdAt)).limit(1);
+  const ticker = item?.ticker ?? "VOO";
+  const radar = await getRadarForTickers([ticker]).catch(() => null);
+  const asset = radar?.assets[0];
+  await sendAlert(chatId, {
+    ticker,
+    name: asset?.name,
+    signal: asset?.signal ?? "Interesante",
+    level: asset?.level ?? 80,
+    price: asset?.price,
+    change: asset?.change,
+    test: true,
+  });
 }
+
+// ---------- Scheduler (called every ~15 min by GitHub Actions) ----------
 
 router.get("/cron/alerts", async (req: Request, res: Response): Promise<void> => {
   res.setHeader("Cache-Control", "no-store");
@@ -209,7 +207,13 @@ const HELP = [
   "",
   "Te aviso cuando cambia la señal JB de los activos de tu watchlist.",
   "",
+  "Para no llenarte de mensajes:",
+  "• Aviso inmediato solo cuando un activo entra en zona 🟢 Interesante (confirmado en 2 revisiones, máximo 1 por activo al día).",
+  "• El resto de cambios llega en un resumen al cierre de Wall Street.",
+  "",
   "/radar · señales de tu watchlist ahora",
+  "/resumen · cambios de hoy hasta ahora",
+  "/prueba · envíame un aviso de prueba",
   "/silenciar · sin avisos hasta mañana",
   "/activar · volver a recibir avisos",
   "/desconectar · dejar de recibir alertas",
@@ -311,6 +315,12 @@ router.post("/telegram/webhook", async (req: Request, res: Response): Promise<vo
       const name = command.toLowerCase().replace(/@\w+$/, "");
       if (name === "/start") await handleStart(chatId, update.message.from, arg);
       else if (name === "/radar" || name === "/estado") await handleRadar(chatId);
+      else if (name === "/prueba" || name === "/resumen") {
+        const link = await linkedUser(chatId);
+        if (!link) await sendText(chatId, "Aún no conectas tu cuenta. Entra al Termómetro → <b>Alertas</b> → <b>Conectar Telegram</b>.", { reply_markup: OPEN_APP_BUTTON });
+        else if (name === "/prueba") await sendTestAlert(link.userId, chatId);
+        else await sendDailyDigest(link.userId, chatId, new Date(), false);
+      }
       else if (name === "/silenciar") await sendText(chatId, await mute(chatId));
       else if (name === "/activar") {
         const link = await linkedUser(chatId);

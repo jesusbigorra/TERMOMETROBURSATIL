@@ -253,6 +253,8 @@ function alertDeliveryStatusLabel(status: string) {
   const labels: Record<string, string> = {
     accepted: "Enviado por Telegram",
     sending: "Enviando",
+    digest_pending: "Irá en el resumen",
+    digest_sent: "Incluido en el resumen",
     waiting_for_whatsapp_configuration: "Pendiente de configurar",
     failed: "No enviado",
     test_accepted: "Prueba enviada",

@@ -14,6 +14,7 @@ export const telegramLinksTable = pgTable(
     enabled: boolean("enabled").notNull().default(true),
     mutedUntil: timestamp("muted_until", { withTimezone: true }),
     linkedAt: timestamp("linked_at", { withTimezone: true }),
+    lastDigestDate: text("last_digest_date"),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (table) => [
@@ -47,6 +48,10 @@ CREATE TABLE IF NOT EXISTS telegram_links (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS telegram_links_code_unique ON telegram_links (link_code);
 CREATE UNIQUE INDEX IF NOT EXISTS telegram_links_chat_unique ON telegram_links (chat_id);
+ALTER TABLE telegram_links ADD COLUMN IF NOT EXISTS last_digest_date text;
+ALTER TABLE watchlist_items ADD COLUMN IF NOT EXISTS pending_signal text;
+ALTER TABLE watchlist_items ADD COLUMN IF NOT EXISTS pending_count integer NOT NULL DEFAULT 0;
+ALTER TABLE watchlist_items ADD COLUMN IF NOT EXISTS last_instant_alert_at timestamptz;
 CREATE TABLE IF NOT EXISTS app_state (
   key text PRIMARY KEY,
   value text NOT NULL,

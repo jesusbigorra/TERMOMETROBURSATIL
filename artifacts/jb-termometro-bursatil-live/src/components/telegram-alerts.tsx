@@ -156,13 +156,13 @@ export function TelegramAlerts({ userId, sampleTicker, onChanged }: { userId: st
         </div>}
         <div className="divide-y divide-card-border rounded-xl border border-card-border">
           <Toggle checked={data.enabled} onChange={(value) => void update({ enabled: value }, "enabled")} label="Recibir alertas" disabled={busy !== null} />
-          <Toggle checked={data.signalChanges} onChange={(value) => void update({ signalChanges: value }, "signal")} label="Cualquier cambio de señal" hint="Ej.: de «A considerar» a «Descartado de momento»." disabled={busy !== null || !data.enabled} />
-          <Toggle checked={data.opportunityAlerts} onChange={(value) => void update({ opportunityAlerts: value }, "opp")} label="Solo oportunidades" hint="Cuando un activo entra en zona «Interesante»." disabled={busy !== null || !data.enabled} />
+          <Toggle checked={data.opportunityAlerts} onChange={(value) => void update({ opportunityAlerts: value }, "opp")} label="Aviso inmediato de oportunidades" hint="Cuando un activo entra en zona 🟢 Interesante. Máximo 1 por activo y 3 al día." disabled={busy !== null || !data.enabled} />
+          <Toggle checked={data.signalChanges} onChange={(value) => void update({ signalChanges: value }, "signal")} label="Resumen diario al cierre" hint="Un solo mensaje a las 4:15 pm de Nueva York con los demás cambios. Si no hubo cambios, no llega." disabled={busy !== null || !data.enabled} />
         </div>
         <button type="button" onClick={() => void sendTest()} disabled={busy !== null} className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-2.5 text-xs font-bold text-primary transition-colors hover:bg-primary/15 disabled:opacity-50">
           <BellRing className="h-3.5 w-3.5" /> {busy === "test" ? "Enviando…" : "Enviarme un mensaje de prueba"}
         </button>
-        <p className="text-[10px] leading-relaxed text-muted-foreground">Revisamos el mercado cada 15 minutos con Wall Street abierto. En Telegram puedes escribir /radar para ver tus señales al momento.</p>
+        <p className="text-[10px] leading-relaxed text-muted-foreground">Revisamos cada 15 minutos con Wall Street abierto. Un cambio cuenta solo si se mantiene 30 minutos, para evitar avisos por vaivenes del precio. En Telegram: /radar, /resumen y /prueba.</p>
       </div>}
 
     {message && <p className={`mt-3 text-[11px] font-bold ${message.tone === "ok" ? "text-accent" : "text-destructive"}`}>{message.text}</p>}
