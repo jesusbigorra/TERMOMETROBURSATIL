@@ -7,11 +7,11 @@ Migrated from Replit to Vercel in September 2026. The owner is Jesús Bigorra; t
 
 | App | Folder | Vercel project | URL |
 |---|---|---|---|
-| Inventario y Caja (NUMINI SHOP) | `artifacts/inventario-caja` | `inventario-caja` | https://caja.termobursatil.com |
+| Inventario y Caja (NUMINI SHOP) | `artifacts/inventario-caja` | `inventario-caja` | https://inventario-caja-nu.vercel.app |
 | JB Termómetro Bursátil | `artifacts/jb-termometro-bursatil-live` | `jb-termometro-bursatil` | https://termobursatil.com |
 | Shared API (Express 5) | `artifacts/api-server` | `jb-api-server` | https://api.termobursatil.com |
 
-Domain `termobursatil.com` bought by Jesús in Vercel (Sept 2026, auto-renew on). `www` redirects to
+Domain `termobursatil.com` (termómetro only; the cash register is a separate project and must not use it) bought by Jesús in Vercel (Sept 2026, auto-renew on). `www` redirects to
 the apex. The old `*.vercel.app` URLs still work; frontends proxy `/api` to `jb-api-server.vercel.app`
 and the Telegram webhook stays on that host. `TERMOMETRO_APP_URL` (API env) sets the bot's links.
 
