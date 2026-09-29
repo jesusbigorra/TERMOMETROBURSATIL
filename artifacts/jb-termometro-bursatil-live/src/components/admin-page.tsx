@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Download, RefreshCw, Search, Send, ShieldAlert, Star, Users } from "lucide-react";
+import { useAuth } from "@clerk/react";
+import { ArrowLeft, Download, LogIn, RefreshCw, Search, Send, ShieldAlert, Star, Users } from "lucide-react";
 
 type Overview = {
   generatedAt: string;
@@ -23,8 +24,8 @@ type Overview = {
   truncated: boolean;
 };
 
-async function fetchOverview(): Promise<Overview> {
-  const response = await fetch("/api/admin/overview", { credentials: "include" });
+async function fetchOverview(token: string | null): Promise<Overview> {
+  const response = await fetch("/api/admin/overview", { credentials: "include", headers: token ? { Authorization: `Bearer ${token}` } : {} });
   const body = (await response.json().catch(() => ({}))) as Overview & { error?: string };
   if (!response.ok) throw Object.assign(new Error(body.error ?? `Error ${response.status}`), { status: response.status });
   return body;
@@ -96,8 +97,16 @@ function downloadCsv(users: Overview["users"]) {
   URL.revokeObjectURL(url);
 }
 
-export function AdminPage({ onBack }: { onBack: () => void }) {
-  const query = useQuery({ queryKey: ["admin-overview"], queryFn: fetchOverview, retry: false, refetchOnWindowFocus: false });
+export function AdminPage({ onBack, signInHref }: { onBack: () => void; signInHref: string }) {
+  const { isLoaded, isSignedIn, getToken } = useAuth();
+  // Wait for Clerk: on a fresh domain the session cookie is not ready on first paint.
+  const query = useQuery({
+    queryKey: ["admin-overview"],
+    queryFn: async () => fetchOverview(await getToken()),
+    enabled: isLoaded && Boolean(isSignedIn),
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "telegram" | "watchlist" | "inactive">("all");
   const data = query.data;
@@ -129,7 +138,8 @@ export function AdminPage({ onBack }: { onBack: () => void }) {
       </div>}
     </div>
 
-    {query.isLoading && <div className="mt-6 grid gap-3 sm:grid-cols-4">{[1, 2, 3, 4].map((i) => <div key={i} className="h-24 animate-pulse rounded-2xl bg-secondary/60" />)}</div>}
+    {isLoaded && !isSignedIn && <div className="mt-10 flex flex-col items-center text-center"><ShieldAlert className="h-8 w-8 text-muted-foreground" /><p className="mt-3 font-bold">Inicia sesión con tu cuenta de administrador.</p><p className="mt-1 max-w-sm text-xs text-muted-foreground">termobursatil.com es una dirección nueva, así que el navegador te pide entrar una vez más.</p><a href={signInHref} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground"><LogIn className="h-3.5 w-3.5" /> Entrar</a></div>}
+    {(!isLoaded || (isSignedIn && query.isLoading)) && <div className="mt-6 grid gap-3 sm:grid-cols-4">{[1, 2, 3, 4].map((i) => <div key={i} className="h-24 animate-pulse rounded-2xl bg-secondary/60" />)}</div>}
     {query.error && <div className="mt-10 flex flex-col items-center text-center"><ShieldAlert className="h-8 w-8 text-muted-foreground" /><p className="mt-3 font-bold">{status === 403 ? "Esta sección es solo para el administrador." : status === 401 ? "Inicia sesión para ver el panel." : "No pudimos cargar el panel."}</p><p className="mt-1 text-xs text-muted-foreground">{status && status < 500 ? "" : (query.error as Error).message}</p></div>}
 
     {data && <>

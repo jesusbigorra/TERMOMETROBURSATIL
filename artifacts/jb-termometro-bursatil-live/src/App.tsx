@@ -1373,7 +1373,7 @@ const ADMIN_EMAILS = new Set(["jesus201@gmail.com"]);
 
 function AdminRoute() {
   const [, setLocation] = useLocation();
-  return <div className="min-h-screen bg-background text-foreground"><AdminPage onBack={() => setLocation("/")} /></div>;
+  return <div className="min-h-screen bg-background text-foreground"><AdminPage onBack={() => setLocation("/")} signInHref={`${basePath}/sign-in?redirect_url=${encodeURIComponent(`${window.location.origin}${basePath}/admin`)}`} /></div>;
 }
 
 function Router() {
