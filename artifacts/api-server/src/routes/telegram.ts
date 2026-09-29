@@ -3,7 +3,7 @@ import { desc, eq } from "drizzle-orm";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { alertPreferencesTable, db, telegramLinksTable, watchlistItemsTable } from "@workspace/db";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
-import { claimAlertRun, evaluateAlerts, lastAlertRun, marketWindowOpen, sendDailyDigest } from "../lib/alert-scheduler";
+import { claimAlertRun, evaluateAlerts, lastAlertRun, marketWindowOpen, sendDailyDigest, SEEDED } from "../lib/alert-scheduler";
 import { getRadarForTickers } from "../lib/market-data";
 import { logger } from "../lib/logger";
 import {
@@ -253,7 +253,7 @@ async function handleStart(chatId: string, from: TgUser | undefined, code: strin
     })
     .where(eq(telegramLinksTable.userId, pending.userId));
   // Start fresh: the next check records current signals without sending old changes.
-  await db.update(watchlistItemsTable).set({ lastSignal: null }).where(eq(watchlistItemsTable.userId, pending.userId));
+  await db.update(watchlistItemsTable).set({ lastSignal: SEEDED, pendingSignal: null, pendingCount: 0 }).where(eq(watchlistItemsTable.userId, pending.userId));
   const items = await db.select({ ticker: watchlistItemsTable.ticker }).from(watchlistItemsTable).where(eq(watchlistItemsTable.userId, pending.userId));
   const watching = items.length
     ? `Estoy vigilando ${items.length} ${items.length === 1 ? "activo" : "activos"} de tu watchlist: ${items.map((i) => i.ticker).join(", ")}.`

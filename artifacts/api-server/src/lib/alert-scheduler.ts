@@ -20,6 +20,8 @@ const DIGEST_AFTER_MINUTES = 16 * 60 + 15; // 16:15 New York
 
 export const INTERESANTE = "Interesante";
 export const DESCARTADO = "Descartado de momento";
+export const SEEDED = "Sin cálculo JB";
+const JUST_ADDED = "Recién añadido a tu watchlist";
 
 // ---------- New York market clock ----------
 
@@ -144,7 +146,11 @@ export async function evaluateAlerts(now = new Date()): Promise<AlertRunSummary>
   for (const { item, link, preference } of rows) {
     const asset = assetByTicker.get(item.ticker);
     if (!asset) continue;
-    const confirmed = item.lastSignal && item.lastSignal !== "Sin cálculo JB" ? item.lastSignal : null;
+    // Just added to the watchlist (last_signal null) and already in the buy zone: treat it as an
+    // entry so the user hears about it. Linking Telegram marks items with SEEDED instead, so an
+    // existing watchlist does not fire all at once.
+    const justAddedInZone = item.lastSignal === null && asset.signal === INTERESANTE && asset.level !== null;
+    const confirmed = justAddedInZone ? JUST_ADDED : item.lastSignal && item.lastSignal !== SEEDED ? item.lastSignal : null;
 
     // First time we see this asset (or no JB level yet): remember the signal quietly.
     if (asset.level === null || !confirmed) {
