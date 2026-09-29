@@ -6,6 +6,7 @@ import alertsRouter from "./alerts";
 import marketRouter from "./market";
 import watchlistRouter from "./watchlist";
 import telegramRouter from "./telegram";
+import adminRouter from "./admin";
 
 const router: IRouter = Router();
 
@@ -15,6 +16,7 @@ router.use(storageRouter);
 router.use(marketRouter);
 // Before watchlist/alerts: those routers apply requireAuth to everything after them.
 router.use(telegramRouter);
+router.use(adminRouter);
 router.use(watchlistRouter);
 router.use(alertsRouter);
 

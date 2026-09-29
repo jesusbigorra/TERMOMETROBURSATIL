@@ -5,6 +5,7 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { AssetInsights } from "@/components/asset-insights";
 import { RecommendedSection } from "@/components/recommended";
 import { TelegramAlerts } from "@/components/telegram-alerts";
+import { AdminPage } from "@/components/admin-page";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Star, Activity as ActivityIcon, Archive, ArrowDownRight, ArrowUpRight, BarChart3, BellRing, Check, ChevronDown, CircleHelp, Clock3, Download, ExternalLink, Filter, Gauge, Gem, Globe2, LayoutDashboard, LogIn, LogOut, Moon, MoreHorizontal, PanelLeftClose, Plus, Printer, Radio, RefreshCw, Search, ShieldAlert, SlidersHorizontal, Sparkles, Sun, TrendingDown, TrendingUp, Wifi, X } from "lucide-react";
@@ -670,6 +671,7 @@ function Sidebar({ isDark, setIsDark }: { isDark: boolean; setIsDark: (value: bo
           <PanelLeftClose className="h-4 w-4" />
         </button>
         <div className="flex items-center gap-1 lg:hidden">
+          {isSignedIn && ADMIN_EMAILS.has(email.toLowerCase()) && <a href={`${basePath}/admin`} className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-[11px] font-bold text-sidebar-foreground/70 hover:bg-sidebar-accent" aria-label="Panel admin"><BarChart3 className="h-4 w-4" /></a>}
           {isSignedIn && <button type="button" onClick={() => void signOut({ redirectUrl: basePath || "/" })} className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-[11px] font-bold text-sidebar-foreground/70 hover:bg-sidebar-accent" aria-label="Cerrar sesión"><LogOut className="h-4 w-4" /> Cerrar sesión</button>}
           <button type="button" onClick={() => setIsDark(!isDark)} className="rounded-lg p-2 text-sidebar-foreground/60 hover:bg-sidebar-accent" aria-label="Cambiar modo de color">
             {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -692,6 +694,7 @@ function Sidebar({ isDark, setIsDark }: { isDark: boolean; setIsDark: (value: bo
         </div>
         {isSignedIn && <div className="rounded-2xl border border-sidebar-border p-3">
           <p className="truncate text-[11px] text-sidebar-foreground/55" title={email}>{email || "Sesión iniciada"}</p>
+          {ADMIN_EMAILS.has(email.toLowerCase()) && <a href={`${basePath}/admin`} className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-sidebar-border px-3 py-2 text-xs font-bold text-sidebar-foreground hover:bg-sidebar-accent"><BarChart3 className="h-3.5 w-3.5" /> Panel admin</a>}
           <button type="button" onClick={() => void signOut({ redirectUrl: basePath || "/" })} className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-sidebar-accent px-3 py-2 text-xs font-bold text-sidebar-foreground hover:opacity-90"><LogOut className="h-3.5 w-3.5" /> Cerrar sesión</button>
         </div>}
         <div className="flex items-center justify-between border-t border-sidebar-border pt-4">
@@ -1365,8 +1368,16 @@ function SignUpPage() {
   return <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4"><SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} /></div>;
 }
 
+// Only shows the link; the API enforces access (ADMIN_EMAILS on the server).
+const ADMIN_EMAILS = new Set(["jesus201@gmail.com"]);
+
+function AdminRoute() {
+  const [, setLocation] = useLocation();
+  return <div className="min-h-screen bg-background text-foreground"><AdminPage onBack={() => setLocation("/")} /></div>;
+}
+
 function Router() {
-  return <ErrorBoundary resetKey={useLocation()[0]}><Switch><Route path="/" component={Dashboard} /><Route path="/sign-in/*?" component={SignInPage} /><Route path="/sign-up/*?" component={SignUpPage} /><Route component={Dashboard} /></Switch></ErrorBoundary>;
+  return <ErrorBoundary resetKey={useLocation()[0]}><Switch><Route path="/" component={Dashboard} /><Route path="/admin" component={AdminRoute} /><Route path="/sign-in/*?" component={SignInPage} /><Route path="/sign-up/*?" component={SignUpPage} /><Route component={Dashboard} /></Switch></ErrorBoundary>;
 }
 
 function ClerkApp() {

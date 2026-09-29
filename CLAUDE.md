@@ -86,6 +86,15 @@ rewrites `/api/*` to the API domain and everything else to `index.html`.
   `signal_changes` = daily digest. Bot commands: /radar /resumen /prueba /silenciar /activar /desconectar.
   Linking resets `last_signal` so old changes are not sent. WhatsApp was removed.
 
+## Admin panel and analytics (Sept 2026)
+
+- `termobursatil.com/admin` (`components/admin-page.tsx`) calls `GET /api/admin/overview` (`routes/admin.ts`).
+  Access: verified Clerk email in `ADMIN_EMAILS` (API env, default `jesus201@gmail.com`); the frontend
+  only hides the link. Data: Clerk user list (up to 500 newest) crossed with watchlist, Telegram links,
+  top tickers and alert counts from Neon. CSV export in the browser.
+- Vercel Web Analytics script is in `index.html`; it only records once Analytics is enabled in the
+  project dashboard.
+
 ## Known gaps after leaving Replit
 
 - Product image uploads: `src/lib/objectStorage.ts` and `src/routes/storage.ts` call the Replit
