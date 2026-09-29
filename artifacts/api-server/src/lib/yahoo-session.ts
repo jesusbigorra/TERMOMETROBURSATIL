@@ -31,23 +31,42 @@ async function withTimeout<T>(ms: number, run: (signal: AbortSignal) => Promise<
   }
 }
 
-async function createSession(): Promise<Session> {
-  const cookie = await withTimeout(7000, async (signal) => {
-    // fc.yahoo.com answers 404 but sets the A3 consent cookie we need.
-    const response = await fetch("https://fc.yahoo.com/", { headers: { "User-Agent": USER_AGENT }, redirect: "manual", signal });
+const BROWSER_HEADERS = {
+  "User-Agent": USER_AGENT,
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.9",
+};
+
+async function cookieFrom(url: string): Promise<string> {
+  return withTimeout(7000, async (signal) => {
+    const response = await fetch(url, { headers: BROWSER_HEADERS, redirect: "manual", signal });
     return extractCookies(response);
   });
-  if (!cookie) throw new Error("Yahoo no entregó cookie de sesión");
-  const crumb = await withTimeout(7000, async (signal) => {
-    const response = await fetch("https://query2.finance.yahoo.com/v1/test/getcrumb", {
-      headers: { "User-Agent": USER_AGENT, Cookie: cookie },
-      signal,
-    });
-    if (!response.ok) throw new Error(`crumb ${response.status}`);
-    return (await response.text()).trim();
-  });
-  if (!crumb || crumb.includes("<") || crumb.length > 64) throw new Error("crumb inválido");
-  return { cookie, crumb, expiresAt: Date.now() + SESSION_TTL_MS };
+}
+
+async function crumbFor(cookie: string): Promise<string | null> {
+  for (const host of ["query2", "query1"]) {
+    const crumb = await withTimeout(7000, async (signal) => {
+      const response = await fetch(`https://${host}.finance.yahoo.com/v1/test/getcrumb`, {
+        headers: { ...BROWSER_HEADERS, Accept: "*/*", Cookie: cookie, Referer: "https://finance.yahoo.com/" },
+        signal,
+      });
+      return response.ok ? (await response.text()).trim() : null;
+    }).catch(() => null);
+    if (crumb && !crumb.includes("<") && crumb.length <= 64) return crumb;
+  }
+  return null;
+}
+
+async function createSession(): Promise<Session> {
+  // Try the lightweight consent cookie first, then the full finance.yahoo.com cookie set.
+  for (const source of ["https://fc.yahoo.com/", "https://finance.yahoo.com/quote/SPY/"]) {
+    const cookie = await cookieFrom(source).catch(() => "");
+    if (!cookie) continue;
+    const crumb = await crumbFor(cookie);
+    if (crumb) return { cookie, crumb, expiresAt: Date.now() + SESSION_TTL_MS };
+  }
+  throw new Error("Yahoo no entregó una sesión válida (crumb)");
 }
 
 export async function getYahooSession(force = false): Promise<Session> {
