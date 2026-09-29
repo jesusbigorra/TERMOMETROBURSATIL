@@ -1,0 +1,17 @@
+name: Alertas Telegram (cada 15 min)
+
+# Calls the API so it checks the watchlists and sends Telegram alerts.
+# Runs on weekdays during the NYSE session (covers EDT and EST).
+# The endpoint is throttled server-side, so extra calls are harmless.
+on:
+  schedule:
+    - cron: "*/15 13-21 * * 1-5"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Revisar señales y avisar
+        run: curl -fsS --max-time 90 "https://jb-api-server.vercel.app/api/cron/alerts"

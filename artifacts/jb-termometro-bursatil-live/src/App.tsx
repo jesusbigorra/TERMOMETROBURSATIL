@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
-import { getGetAlertDeliveriesQueryKey, getGetAlertPreferencesQueryKey, getGetEmergingMarketIdeasQueryKey, getGetMarketActivityQueryKey, getGetMarketRadarQueryKey, getGetWatchlistQueryKey, getGetWatchlistRadarQueryKey, useAddWatchlistItem, useGetAlertDeliveries, useGetAlertPreferences, useGetEmergingMarketIdeas, useGetMarketActivity, useGetMarketRadar, useGetWatchlist, useGetWatchlistRadar, useHealthCheck, useRemoveWatchlistItem, useSearchMarketInstruments, useSendTestAlert, useUpdateAlertPreferences } from "@workspace/api-client-react";
+import { getGetAlertDeliveriesQueryKey, getGetEmergingMarketIdeasQueryKey, getGetMarketActivityQueryKey, getGetMarketRadarQueryKey, getGetWatchlistQueryKey, getGetWatchlistRadarQueryKey, useAddWatchlistItem, useGetAlertDeliveries, useGetEmergingMarketIdeas, useGetMarketActivity, useGetMarketRadar, useGetWatchlist, useGetWatchlistRadar, useHealthCheck, useRemoveWatchlistItem, useSearchMarketInstruments } from "@workspace/api-client-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { AssetInsights } from "@/components/asset-insights";
 import { RecommendedSection } from "@/components/recommended";
+import { TelegramAlerts } from "@/components/telegram-alerts";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Star, Activity as ActivityIcon, Archive, ArrowDownRight, ArrowUpRight, BarChart3, BellRing, Check, ChevronDown, CircleHelp, Clock3, Download, ExternalLink, Filter, Gauge, Gem, Globe2, LayoutDashboard, LogIn, LogOut, Moon, MoreHorizontal, PanelLeftClose, Plus, Printer, Radio, RefreshCw, Search, ShieldAlert, SlidersHorizontal, Sparkles, Sun, TrendingDown, TrendingUp, Wifi, X } from "lucide-react";
@@ -250,7 +251,8 @@ function signalTone(value = "") {
 
 function alertDeliveryStatusLabel(status: string) {
   const labels: Record<string, string> = {
-    accepted: "Enviado",
+    accepted: "Enviado por Telegram",
+    sending: "Enviando",
     waiting_for_whatsapp_configuration: "Pendiente de configurar",
     failed: "No enviado",
     test_accepted: "Prueba enviada",
@@ -988,6 +990,21 @@ function RadarTable({ assets, loading, baseTickers, personalTickers }: { assets:
     const timeout = window.setTimeout(() => setSearchQuery(search.trim()), 320);
     return () => window.clearTimeout(timeout);
   }, [search]);
+  // Deep link from Telegram alerts: /?ticker=SCHD opens that asset's analysis.
+  const deepLinkHandled = useRef(false);
+  useEffect(() => {
+    if (deepLinkHandled.current || !assets.length) return;
+    const wanted = new URLSearchParams(window.location.search).get("ticker")?.toUpperCase();
+    if (!wanted) { deepLinkHandled.current = true; return; }
+    // Wait until the personal radar (signed-in watchlist) has the asset.
+    const match = assets.find((asset) => asset.ticker === wanted);
+    if (!match) return;
+    deepLinkHandled.current = true;
+    setSelected(match);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("ticker");
+    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+  }, [assets, loading]);
   useEffect(() => {
     const section = radarSectionRef.current;
     if (!section) return;
@@ -1117,26 +1134,16 @@ function PersonalWatchlist() {
   const queryClient = useQueryClient();
   const watchlistKey = useMemo(() => scopeUserQuery(getGetWatchlistQueryKey(), userId), [userId]);
   const watchlistRadarKey = useMemo(() => scopeUserQuery(getGetWatchlistRadarQueryKey(), userId), [userId]);
-  const preferencesKey = useMemo(() => scopeUserQuery(getGetAlertPreferencesQueryKey(), userId), [userId]);
   const deliveriesKey = useMemo(() => scopeUserQuery(getGetAlertDeliveriesQueryKey(), userId), [userId]);
   const privateQuery = { enabled: Boolean(userId) };
   const watchlistQuery = useGetWatchlist({ query: { queryKey: watchlistKey, ...privateQuery } });
   const personalRadarQuery = useGetWatchlistRadar({ query: { queryKey: watchlistRadarKey, ...privateQuery } });
-  const preferencesQuery = useGetAlertPreferences({ query: { queryKey: preferencesKey, ...privateQuery } });
   const deliveriesQuery = useGetAlertDeliveries({ query: { queryKey: deliveriesKey, ...privateQuery } });
   const addMutation = useAddWatchlistItem();
   const removeMutation = useRemoveWatchlistItem();
-  const preferencesMutation = useUpdateAlertPreferences();
-  const testAlertMutation = useSendTestAlert();
   const [searchText, setSearchText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [phone, setPhone] = useState("");
-  const [consent, setConsent] = useState(false);
-  const [enabled, setEnabled] = useState(false);
-  const [signalChanges, setSignalChanges] = useState(true);
-  const [opportunityAlerts, setOpportunityAlerts] = useState(true);
   const [message, setMessage] = useState("");
-  const [testAlertMessage, setTestAlertMessage] = useState("");
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const instrumentSearch = useSearchMarketInstruments({ q: searchQuery }, { query: { queryKey: ["market-search", searchQuery], enabled: searchQuery.length >= 2, retry: false } });
 
@@ -1145,19 +1152,9 @@ function PersonalWatchlist() {
     return () => window.clearTimeout(timeout);
   }, [searchText]);
 
-  useEffect(() => {
-    if (!preferencesQuery.data) return;
-    setPhone(preferencesQuery.data.phoneE164 ?? "");
-    setConsent(preferencesQuery.data.consent);
-    setEnabled(preferencesQuery.data.enabled);
-    setSignalChanges(preferencesQuery.data.signalChanges);
-    setOpportunityAlerts(preferencesQuery.data.opportunityAlerts);
-  }, [preferencesQuery.data]);
-
   const refreshPersonalData = () => Promise.all([
     queryClient.invalidateQueries({ queryKey: watchlistKey }),
     queryClient.invalidateQueries({ queryKey: watchlistRadarKey }),
-    queryClient.invalidateQueries({ queryKey: preferencesKey }),
     queryClient.invalidateQueries({ queryKey: deliveriesKey }),
   ]);
   const listed = new Set((watchlistQuery.data ?? []).map((item) => item.ticker));
@@ -1187,33 +1184,6 @@ function PersonalWatchlist() {
       setMessage(`No pudimos eliminar ${ticker}. Inténtalo de nuevo.`);
     }
   };
-  const saveAlerts = async () => {
-    setMessage("");
-    try {
-      await preferencesMutation.mutateAsync({ data: { phoneE164: phone.trim() || null, consent, enabled, signalChanges, opportunityAlerts } });
-      setMessage(enabled ? "Alertas por WhatsApp activadas." : "Preferencias de alerta guardadas.");
-      await refreshPersonalData();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message.replace(/^HTTP \d+ \w+: /, "") : "No pudimos guardar las alertas.");
-    }
-  };
-  const sendTestAlert = async () => {
-    setTestAlertMessage("");
-    try {
-      const result = await testAlertMutation.mutateAsync({ data: {} });
-      setTestAlertMessage(result.message);
-      await queryClient.invalidateQueries({ queryKey: deliveriesKey });
-    } catch (error) {
-      setTestAlertMessage(error instanceof Error ? error.message.replace(/^HTTP \d+ \w+: /, "") : "No pudimos enviar la prueba.");
-    }
-  };
-  const testTicker = watchAssets[0]?.ticker ?? "JEPQ";
-  const testPreview = `JB Termómetro Bursátil
-Alerta de prueba
-Activo: ${testTicker}
-Nueva señal: Interesante
-Nivel JB: 82/100`;
-
   return (
     <section id="watchlist" translate="no" className="notranslate scroll-mt-6 rounded-2xl border border-card-border bg-card">
       <div className="flex flex-col gap-3 border-b border-card-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -1235,16 +1205,7 @@ Nivel JB: 82/100`;
           {personalRadarQuery.data?.errors.length ? <p className="mt-3 text-[10px] text-destructive">Datos parciales: {personalRadarQuery.data.errors.join(" · ")}</p> : null}
         </div>
         <div className="p-4 sm:p-5 xl:col-span-2">
-          <div className="flex items-start gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[hsl(171,42%,38%)]/15 text-[hsl(171,42%,38%)]"><BellRing className="h-4 w-4" /></span><div><p className="text-sm font-bold">Alertas por WhatsApp</p><p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">Recibe un aviso cuando cambie la señal de tus activos.</p></div></div>
-          <div className="mt-4 space-y-3">
-            <label className="block text-[11px] font-bold text-muted-foreground">Número de WhatsApp<input value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+34600111222" className="mt-1.5 h-9 w-full rounded-xl border border-input bg-background px-3 font-mono-app text-xs text-foreground outline-none focus:border-primary" /></label>
-            <label className="flex cursor-pointer items-start gap-2 text-[11px] leading-relaxed text-muted-foreground"><input checked={consent} onChange={(event) => setConsent(event.target.checked)} type="checkbox" className="mt-0.5 accent-primary" />Acepto recibir mensajes de alerta en este número. Puedo desactivarlos cuando quiera.</label>
-            <label className="flex items-center justify-between text-xs font-bold"><span>Activar alertas</span><input checked={enabled} onChange={(event) => setEnabled(event.target.checked)} type="checkbox" className="h-4 w-4 accent-primary" /></label>
-            <div className="grid gap-2 text-[11px] text-muted-foreground sm:grid-cols-2"><label className="flex items-center gap-2"><input checked={signalChanges} onChange={(event) => setSignalChanges(event.target.checked)} type="checkbox" className="accent-primary" />Cambios de señal</label><label className="flex items-center gap-2"><input checked={opportunityAlerts} onChange={(event) => setOpportunityAlerts(event.target.checked)} type="checkbox" className="accent-primary" />Nueva oportunidad</label></div>
-            <button type="button" onClick={() => void saveAlerts()} disabled={preferencesMutation.isPending} className="w-full rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground disabled:opacity-50">{preferencesMutation.isPending ? "Guardando…" : "Guardar alertas"}</button>
-             <div className="rounded-xl border border-card-border bg-background/70 p-3"><div className="flex items-center justify-between gap-3"><p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Vista previa</p><span className="text-[10px] text-muted-foreground">Mensaje de ejemplo</span></div><pre className="mt-2 whitespace-pre-wrap font-sans text-[11px] leading-relaxed text-foreground">{testPreview}</pre><button type="button" onClick={() => void sendTestAlert()} disabled={testAlertMutation.isPending || !phone.trim() || !consent || !enabled} className="mt-3 w-full rounded-xl border border-primary/30 bg-primary/10 px-4 py-2.5 text-xs font-bold text-primary transition-colors hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-50">{testAlertMutation.isPending ? "Enviando prueba…" : "Enviar mensaje de prueba"}</button><p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">Debes guardar primero el número, el consentimiento y las alertas. La prueba usa la misma plantilla de WhatsApp Business; el texto final puede variar según la plantilla aprobada en Meta.</p>{testAlertMessage && <p className={`mt-2 text-[11px] font-bold ${testAlertMessage.includes("No pudimos") || testAlertMessage.includes("no aceptó") ? "text-destructive" : "text-accent"}`}>{testAlertMessage}</p>}</div>
-             <p className="text-[10px] leading-relaxed text-muted-foreground">Los envíos automáticos usan una plantilla aprobada de WhatsApp Business. Si Meta aún no ha configurado el número de empresa o la plantilla, el aviso quedará registrado como pendiente.</p>
-          </div>
+          <TelegramAlerts userId={userId ?? "anonymous"} sampleTicker={watchAssets[0]?.ticker ?? "SCHD"} onChanged={() => void queryClient.invalidateQueries({ queryKey: deliveriesKey })} />
         </div>
       </div>
       {(message || deliveriesQuery.data?.length) && <div className="border-t border-card-border px-5 py-3"><p className={`text-[11px] ${message.includes("No pudimos") ? "text-destructive" : "text-muted-foreground"}`}>{message || "Último historial de alertas"}</p>{deliveriesQuery.data?.slice(0, 2).map((delivery) => <p key={delivery.id} className="mt-1 font-mono-app text-[10px] text-muted-foreground">{delivery.ticker} · {delivery.signal} · {alertDeliveryStatusLabel(delivery.status)}</p>)}</div>}
