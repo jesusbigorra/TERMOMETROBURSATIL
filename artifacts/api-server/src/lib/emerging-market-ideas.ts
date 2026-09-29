@@ -2,6 +2,7 @@ import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { logger } from "./logger";
+import { fetchYahooAuthed } from "./yahoo-session";
 
 export const EMERGING_MARKET_ETF_UNIVERSE = [
   { ticker: "IEMG", name: "iShares Core MSCI Emerging Markets ETF" },
@@ -187,14 +188,14 @@ export function rankEmergingIdeas(candidates: RankedInput[]): EmergingMarketIdea
 async function fetchFundamentals(ticker: string): Promise<QuoteFundamentals> {
   const modules = "summaryDetail,defaultKeyStatistics,financialData";
   try {
-    const summary = await fetchJson(`https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(ticker)}?modules=${modules}`);
+    const summary = await fetchYahooAuthed(`https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(ticker)}?modules=${modules}`);
     const values = extractFundamentals(summary);
     if (values.dividendYield !== null || values.peRatio !== null || values.profitMargin !== null) return values;
   } catch {
     // The quoteSummary endpoint is not available for every region/ticker.
   }
   try {
-    const quote = await fetchJson(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(ticker)}`);
+    const quote = await fetchYahooAuthed(`https://query2.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(ticker)}`);
     return extractFundamentals(quote);
   } catch {
     return { dividendYield: null, peRatio: null, profitMargin: null };

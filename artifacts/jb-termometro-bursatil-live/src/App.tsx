@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { getGetAlertDeliveriesQueryKey, getGetAlertPreferencesQueryKey, getGetEmergingMarketIdeasQueryKey, getGetMarketActivityQueryKey, getGetMarketRadarQueryKey, getGetWatchlistQueryKey, getGetWatchlistRadarQueryKey, useAddWatchlistItem, useGetAlertDeliveries, useGetAlertPreferences, useGetEmergingMarketIdeas, useGetMarketActivity, useGetMarketRadar, useGetWatchlist, useGetWatchlistRadar, useHealthCheck, useRemoveWatchlistItem, useSearchMarketInstruments, useSendTestAlert, useUpdateAlertPreferences } from "@workspace/api-client-react";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { AssetInsights } from "@/components/asset-insights";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Activity as ActivityIcon, Archive, ArrowDownRight, ArrowUpRight, BarChart3, BellRing, Check, ChevronDown, CircleHelp, Clock3, Download, ExternalLink, Filter, Gauge, Gem, Globe2, LayoutDashboard, LogIn, LogOut, Moon, MoreHorizontal, PanelLeftClose, Plus, Printer, Radio, RefreshCw, Search, ShieldAlert, SlidersHorizontal, Sparkles, Sun, TrendingDown, TrendingUp, Wifi, X } from "lucide-react";
@@ -808,7 +809,7 @@ function AssetAnalysisModal({ asset, onClose }: { asset: Asset; onClose: () => v
   const hasFullTechnicalHistory = asset.level !== null;
   const history = asset.history ?? [];
   return <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(16,28,36,.46)] p-0 backdrop-blur-[2px] sm:items-center sm:p-5" onClick={onClose}>
-    <div className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-t-3xl border border-card-border bg-card p-5 shadow-2xl sm:rounded-3xl" onClick={(event) => event.stopPropagation()}>
+    <div className="max-h-[92dvh] w-full max-w-3xl overflow-y-auto rounded-t-3xl border border-card-border bg-card p-5 shadow-2xl sm:rounded-3xl" onClick={(event) => event.stopPropagation()}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3"><TickerMark value={asset.ticker} large /><div><p className="font-mono-app text-sm font-bold"><TickerText value={asset.ticker} /> <span translate="no" className="notranslate ml-1 font-sans text-[10px] font-medium text-muted-foreground">{asset.type}</span></p><p className="mt-0.5 text-xs text-muted-foreground">{asset.name}</p></div></div>
         <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-secondary" aria-label="Cerrar detalle"><X className="h-4 w-4" /></button>
@@ -840,33 +841,7 @@ function AssetAnalysisModal({ asset, onClose }: { asset: Asset; onClose: () => v
         <div className="detail-stat"><span>Posición JB</span><strong className="text-xs leading-tight">{asset.position}</strong></div>
       </div>
 
-       <section className="mt-5 rounded-2xl border border-card-border bg-secondary/30 p-4">
-         <div className="flex flex-wrap items-start justify-between gap-3">
-           <div>
-             <p className="text-xs font-bold">Evolución diaria: precio y medias</p>
-             <p className="mt-0.5 max-w-lg text-[11px] leading-relaxed text-muted-foreground">Cierres diarios de Yahoo Finance durante el último año. Las medias aparecen cuando reúnen suficientes sesiones.</p>
-           </div>
-           <span className="rounded-full bg-card px-2.5 py-1 font-mono-app text-[10px] text-muted-foreground">Yahoo Finance · diario</span>
-         </div>
-         {history.length ? <div className="mt-4 h-[250px] w-full">
-           <ResponsiveContainer width="100%" height="100%">
-             <LineChart data={history} margin={{ top: 8, right: 8, left: -18, bottom: 2 }}>
-               <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="2 3" vertical={false} />
-               <XAxis dataKey="date" tickFormatter={(value) => formatChartDate(String(value))} tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} minTickGap={34} />
-               <YAxis domain={["auto", "auto"]} tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))", fontFamily: "DM Mono" }} axisLine={false} tickLine={false} tickFormatter={(value) => formatNumber(Number(value), 0)} width={48} />
-               <Tooltip labelFormatter={(label) => formatChartDate(String(label))} formatter={(value, name) => [typeof value === "number" ? formatNumber(value) : "—", String(name)]} contentStyle={{ borderRadius: 12, border: "1px solid #d9ddd8", fontSize: 11, background: "#fbfaf6" }} />
-               <Legend verticalAlign="top" align="right" iconType="plainline" wrapperStyle={{ fontSize: 10, paddingBottom: 8 }} />
-               <Line type="monotone" dataKey="close" name="Precio" stroke={CHART_COLORS.ink} strokeWidth={2.2} dot={false} activeDot={{ r: 3 }} connectNulls={false} />
-               <Line type="monotone" dataKey="sma20" name="SMA20" stroke={CHART_COLORS.coral} strokeWidth={1.5} dot={false} connectNulls={false} />
-               <Line type="monotone" dataKey="sma50" name="SMA50" stroke={CHART_COLORS.teal} strokeWidth={1.5} dot={false} connectNulls={false} />
-               <Line type="monotone" dataKey="sma100" name="SMA100" stroke={CHART_COLORS.sky} strokeWidth={1.5} dot={false} connectNulls={false} />
-               <Line type="monotone" dataKey="sma200" name="SMA200" stroke={CHART_COLORS.amber} strokeWidth={1.8} dot={false} connectNulls={false} />
-             </LineChart>
-           </ResponsiveContainer>
-         </div> : <div className="mt-4 flex h-32 items-center justify-center rounded-xl bg-card text-xs text-muted-foreground">Histórico diario no disponible.</div>}
-         <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">El gráfico es histórico y diario; la cotización destacada arriba es la última lectura disponible y puede estar retrasada. No es una cotización en tiempo real.</p>
-       </section>
-
+      <AssetInsights ticker={asset.ticker} price={asset.price} fallbackHistory={history} dcaContent={<>
       <section className="mt-5 rounded-2xl border border-card-border bg-secondary/30 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-xs font-bold">Precio frente a medias móviles</p><p className="mt-0.5 text-[11px] text-muted-foreground">Cierres diarios de Yahoo Finance; cada lectura compara el último precio con su media.</p></div><span className="rounded-full bg-card px-2.5 py-1 font-mono-app text-[10px] text-muted-foreground">Histórico diario</span></div>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">{averages.map((average) => {
@@ -885,6 +860,7 @@ function AssetAnalysisModal({ asset, onClose }: { asset: Asset; onClose: () => v
         </div>
         <p className="mt-3 rounded-xl bg-primary/5 px-3 py-2.5 text-[11px] leading-relaxed text-muted-foreground">{signalExplanation(asset)}</p>
       </section>
+      </>} />
     </div>
   </div>;
 }

@@ -8,6 +8,8 @@ import {
 import { getMarketRadar } from "../lib/market-data";
 import { searchMarketInstruments } from "../lib/market-data";
 import { getEmergingMarketIdeas } from "../lib/emerging-market-ideas";
+import { getAssetAnalysis } from "../lib/asset-analysis";
+import { isValidTicker } from "../lib/market-data";
 
 const router: IRouter = Router();
 
@@ -51,6 +53,22 @@ router.get("/market/search", async (req, res): Promise<void> => {
   } catch (error) {
     req.log.warn({ err: error }, "Market instrument search unavailable");
     res.status(503).json({ error: "No pudimos buscar instrumentos ahora. Inténtalo de nuevo." });
+  }
+});
+
+router.get("/market/analysis/:ticker", async (req, res): Promise<void> => {
+  const ticker = isValidTicker(String(req.params.ticker ?? ""));
+  if (!ticker) {
+    res.status(400).json({ error: "Ticker no válido." });
+    return;
+  }
+  try {
+    const analysis = await getAssetAnalysis(ticker);
+    res.setHeader("Cache-Control", "public, s-maxage=900, stale-while-revalidate=3600");
+    res.json(analysis);
+  } catch (error) {
+    req.log.warn({ err: error, ticker }, "Asset analysis unavailable");
+    res.status(503).json({ error: "No pudimos analizar este activo ahora. Inténtalo de nuevo." });
   }
 });
 
