@@ -3,6 +3,7 @@ import healthRouter from "./health";
 import inventoryRouter from "./inventory";
 import storageRouter from "./storage";
 import alertsRouter from "./alerts";
+import adminImportRouter from "./admin-import";
 import marketRouter from "./market";
 import watchlistRouter from "./watchlist";
 
@@ -14,5 +15,6 @@ router.use(storageRouter);
 router.use(marketRouter);
 router.use(watchlistRouter);
 router.use(alertsRouter);
+router.use(adminImportRouter);
 
 export default router;
