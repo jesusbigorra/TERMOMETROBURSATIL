@@ -618,14 +618,23 @@ function Sidebar({ isDark, setIsDark }: { isDark: boolean; setIsDark: (value: bo
       frame = 0;
       if (Date.now() < lockUntil.current) return;
       const line = headerOffset() + 60;
+      // Signed out, the radar table is the base universe: treat it as part of "Señales JB".
+      const spots = [...navItems.filter((item) => item.target).map((item) => ({ key: item.key, target: item.target! })), ...(isSignedIn ? [] : [{ key: "signals", target: "radar-main" }])];
       let current = "overview";
       let best = -Infinity;
-      for (const item of navItems) {
-        if (!item.target) continue;
-        const element = document.getElementById(item.target);
+      for (const spot of spots) {
+        const element = document.getElementById(spot.target);
         if (!element) continue;
         const top = element.getBoundingClientRect().top;
-        if (top <= line && top > best) { best = top; current = item.key; }
+        if (top <= line && top > best) { best = top; current = spot.key; }
+      }
+      // At the very bottom, short last sections never reach the line: pick the lowest visible one.
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 8) {
+        let lowest = -Infinity;
+        for (const spot of spots) {
+          const top = document.getElementById(spot.target)?.getBoundingClientRect().top;
+          if (top !== undefined && top < window.innerHeight && top > lowest) { lowest = top; current = spot.key; }
+        }
       }
       setActive(current);
     };
@@ -634,7 +643,7 @@ function Sidebar({ isDark, setIsDark }: { isDark: boolean; setIsDark: (value: bo
     window.addEventListener("resize", onScroll);
     update();
     return () => { window.removeEventListener("scroll", onScroll); window.removeEventListener("resize", onScroll); if (frame) cancelAnimationFrame(frame); };
-  }, [navItems]);
+  }, [navItems, isSignedIn]);
   // On phones the tab row scrolls sideways: keep the active tab in view.
   useEffect(() => {
     const nav = navRef.current;
