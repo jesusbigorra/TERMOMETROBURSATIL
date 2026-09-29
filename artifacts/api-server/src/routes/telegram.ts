@@ -80,7 +80,7 @@ async function statusFor(userId: string) {
 // ---------- App endpoints (signed-in users) ----------
 
 router.get("/telegram/status", requireAuth, async (req: AuthenticatedRequest, res): Promise<void> => {
-  void ensureWebhook();
+  await ensureWebhook();
   res.json(await statusFor(req.userId!));
 });
 
@@ -179,7 +179,7 @@ router.get("/cron/alerts", async (req: Request, res: Response): Promise<void> =>
     res.json({ ok: true, skipped: "telegram_not_configured" });
     return;
   }
-  void ensureWebhook();
+  await ensureWebhook();
   if (!marketWindowOpen() && req.query.anytime !== "1") {
     res.json({ ok: true, skipped: "market_closed" });
     return;
