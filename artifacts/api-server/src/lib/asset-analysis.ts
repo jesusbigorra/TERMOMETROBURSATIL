@@ -520,3 +520,11 @@ export async function getAssetAnalysis(rawTicker: string): Promise<AssetAnalysis
     };
   });
 }
+
+// Full daily history (Yahoo "max") in a compact shape, for long backtests of the JB signal.
+export async function getLongHistory(rawTicker: string): Promise<{ ticker: string; dates: string[]; close: number[]; adjClose: number[] }> {
+  const ticker = rawTicker.trim().toUpperCase();
+  const series = await fetchSeries(ticker, "max");
+  const round = (v: number) => Math.round(v * 10000) / 10000;
+  return { ticker, dates: series.dates, close: series.close.map(round), adjClose: series.adjClose.map(round) };
+}

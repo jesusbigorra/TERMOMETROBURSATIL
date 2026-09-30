@@ -8,7 +8,7 @@ import {
 import { getMarketRadar } from "../lib/market-data";
 import { searchMarketInstruments } from "../lib/market-data";
 import { getEmergingMarketIdeas } from "../lib/emerging-market-ideas";
-import { getAssetAnalysis } from "../lib/asset-analysis";
+import { getAssetAnalysis, getLongHistory } from "../lib/asset-analysis";
 import { isValidTicker } from "../lib/market-data";
 
 const router: IRouter = Router();
@@ -69,6 +69,22 @@ router.get("/market/analysis/:ticker", async (req, res): Promise<void> => {
   } catch (error) {
     req.log.warn({ err: error, ticker }, "Asset analysis unavailable");
     res.status(503).json({ error: "No pudimos analizar este activo ahora. Inténtalo de nuevo." });
+  }
+});
+
+router.get("/market/history/:ticker", async (req, res): Promise<void> => {
+  const ticker = isValidTicker(String(req.params.ticker ?? ""));
+  if (!ticker) {
+    res.status(400).json({ error: "Ticker no válido." });
+    return;
+  }
+  try {
+    const history = await getLongHistory(ticker);
+    res.setHeader("Cache-Control", "public, s-maxage=43200, stale-while-revalidate=86400");
+    res.json(history);
+  } catch (error) {
+    req.log.warn({ err: error, ticker }, "Long history unavailable");
+    res.status(503).json({ error: "No pudimos traer la historia de este activo." });
   }
 });
 
