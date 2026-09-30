@@ -179,11 +179,11 @@ router.get("/cron/alerts", async (req: Request, res: Response): Promise<void> =>
   }
   await ensureWebhook();
   if (!marketWindowOpen() && req.query.anytime !== "1") {
-    res.json({ ok: true, skipped: "market_closed" });
+    res.json({ ok: true, skipped: "market_closed", lastRun: await lastAlertRun().catch(() => null) });
     return;
   }
   if (!(await claimAlertRun())) {
-    res.json({ ok: true, skipped: "ran_recently" });
+    res.json({ ok: true, skipped: "ran_recently", lastRun: await lastAlertRun().catch(() => null) });
     return;
   }
   try {
