@@ -110,9 +110,11 @@ function str(value: unknown): string | null {
 
 async function fetchSeries(ticker: string, range = "5y"): Promise<Series> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 9000);
+  const timer = setTimeout(() => controller.abort(), range === "max" ? 25000 : 9000);
   try {
-    const path = `/v8/finance/chart/${encodeURIComponent(ticker)}?range=${range}&interval=1d&events=div%2Csplit&includePrePost=false`;
+    // Yahoo downsamples range=max to monthly bars; explicit periods keep daily bars.
+    const span = range === "max" ? `period1=0&period2=${Math.floor(Date.now() / 1000)}` : `range=${range}`;
+    const path = `/v8/finance/chart/${encodeURIComponent(ticker)}?${span}&interval=1d&events=div%2Csplit&includePrePost=false`;
     // Same client id as the radar (which Yahoo accepts); on 429 retry the other host.
     let response = await fetch(`https://query1.finance.yahoo.com${path}`, { headers: { Accept: "application/json", "User-Agent": "JB-Termometro/1.0" }, signal: controller.signal });
     if (response.status === 429 || response.status >= 500) {
