@@ -6,6 +6,7 @@ import { AssetInsights } from "@/components/asset-insights";
 import { RecommendedSection } from "@/components/recommended";
 import { TelegramAlerts } from "@/components/telegram-alerts";
 import { AdminPage } from "@/components/admin-page";
+import { MethodologyPage } from "@/components/methodology-page";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Star, Activity as ActivityIcon, Archive, ArrowDownRight, ArrowUpRight, BarChart3, BellRing, Check, ChevronDown, CircleHelp, Clock3, Download, ExternalLink, Filter, Gauge, Gem, Globe2, LayoutDashboard, LogIn, LogOut, Moon, MoreHorizontal, PanelLeftClose, Plus, Printer, Radio, RefreshCw, Search, ShieldAlert, SlidersHorizontal, Sparkles, Sun, TrendingDown, TrendingUp, Wifi, X } from "lucide-react";
@@ -690,7 +691,7 @@ function Sidebar({ isDark, setIsDark }: { isDark: boolean; setIsDark: (value: bo
           <div className="flex items-center gap-2 text-[11px] font-bold"><CircleHelp className="h-3.5 w-3.5 text-sidebar-primary" /> ¿Cómo leer el radar?</div>
           <p className="mt-2 text-[11px] leading-relaxed text-sidebar-foreground/55">La señal combina nivel JB, RSI y tendencia. No es una orden; es una brújula.</p>
           {guideExpanded && <p className="mt-2 border-t border-sidebar-border pt-2 text-[11px] leading-relaxed text-sidebar-foreground/55">Busca niveles bajos con RSI contenido y espera confirmación de tendencia. La paciencia también es una posición.</p>}
-          <button type="button" onClick={() => setGuideExpanded((expanded) => !expanded)} className="mt-3 text-[11px] font-bold text-sidebar-primary hover:underline" aria-expanded={guideExpanded}>{guideExpanded ? "Cerrar guía" : "Abrir guía"} <ArrowUpRight className="ml-1 inline h-3 w-3" /></button>
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1"><button type="button" onClick={() => setGuideExpanded((expanded) => !expanded)} className="text-[11px] font-bold text-sidebar-primary hover:underline" aria-expanded={guideExpanded}>{guideExpanded ? "Cerrar guía" : "Abrir guía"}</button><a href={`${basePath}/metodologia`} className="text-[11px] font-bold text-sidebar-primary hover:underline">Metodología y evidencia <ArrowUpRight className="ml-0.5 inline h-3 w-3" /></a></div>
         </div>
         {isSignedIn && <div className="rounded-2xl border border-sidebar-border p-3">
           <p className="truncate text-[11px] text-sidebar-foreground/55" title={email}>{email || "Sesión iniciada"}</p>
@@ -1371,13 +1372,19 @@ function SignUpPage() {
 // Only shows the link; the API enforces access (ADMIN_EMAILS on the server).
 const ADMIN_EMAILS = new Set(["jesus201@gmail.com"]);
 
+function MethodologyRoute() {
+  const [, setLocation] = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+  return <div className="min-h-screen bg-background text-foreground"><MethodologyPage onBack={() => setLocation("/")} /></div>;
+}
+
 function AdminRoute() {
   const [, setLocation] = useLocation();
   return <div className="min-h-screen bg-background text-foreground"><AdminPage onBack={() => setLocation("/")} signInHref={`${basePath}/sign-in?redirect_url=${encodeURIComponent(`${window.location.origin}${basePath}/admin`)}`} /></div>;
 }
 
 function Router() {
-  return <ErrorBoundary resetKey={useLocation()[0]}><Switch><Route path="/" component={Dashboard} /><Route path="/admin" component={AdminRoute} /><Route path="/sign-in/*?" component={SignInPage} /><Route path="/sign-up/*?" component={SignUpPage} /><Route component={Dashboard} /></Switch></ErrorBoundary>;
+  return <ErrorBoundary resetKey={useLocation()[0]}><Switch><Route path="/" component={Dashboard} /><Route path="/admin" component={AdminRoute} /><Route path="/metodologia" component={MethodologyRoute} /><Route path="/sign-in/*?" component={SignInPage} /><Route path="/sign-up/*?" component={SignUpPage} /><Route component={Dashboard} /></Switch></ErrorBoundary>;
 }
 
 function ClerkApp() {

@@ -85,7 +85,31 @@ function startFor(analysis: AssetAnalysis | undefined, period: PeriodKey, fallba
 }
 
 // ---------- DCA simulator ----------
-type DcaResult = { invested: number; value: number; gain: number; lumpValue: number; lumpGain: number; irr: number | null; lumpCagr: number | null; avgCostVsNow: number; purchases: number; series: Array<{ date: string; invested: number; value: number; lump: number }> };
+// Each month buys on the first day in a JB discount zone (Interesante or Nivel JB >= 60);
+// if the month had none, it buys on the last trading day, so no contribution is skipped.
+// It also computes plain day-1 DCA for transparency (see /metodologia).
+type DcaResult = { invested: number; value: number; gain: number; irr: number | null; avgCostVsNow: number; purchases: number; zonePurchases: number; baselineValue: number; baselineDiff: number; series: Array<{ date: string; invested: number; value: number; baseline: number }> };
+
+// Same rules as the radar (lib/market-data.ts computeSignal), RSI Wilder over a trailing year.
+function zoneFlags(history: AnalysisPoint[]): boolean[] {
+  const closes = history.map((point) => point.close);
+  return history.map((point, index) => {
+    if (index < 252 || point.sma20 === null || point.sma50 === null || point.sma100 === null || point.sma200 === null) return false;
+    let gain = 0;
+    let loss = 0;
+    for (let k = index - 250; k <= index; k += 1) {
+      const delta = closes[k] - closes[k - 1];
+      gain = gain * (13 / 14) + Math.max(delta, 0) / 14;
+      loss = loss * (13 / 14) + Math.max(-delta, 0) / 14;
+    }
+    const rsi = loss === 0 ? 100 : 100 - 100 / (1 + gain / loss);
+    const price = point.close;
+    const pointsSma = price < point.sma200 ? 50 : price < point.sma100 ? 40 : price < point.sma50 ? 30 : price < point.sma20 ? 20 : 0;
+    if (rsi >= 65 || pointsSma === 0) return false;
+    const level = Math.min(100, Math.max(10, Math.trunc(pointsSma + Math.max(0, Math.min(50, (70 - rsi) * 1.25)))));
+    return (rsi >= 30 && rsi <= 40 && pointsSma >= 30) || level >= 60;
+  });
+}
 
 function xirr(flows: Array<{ date: string; amount: number }>): number | null {
   const t0 = Date.parse(flows[0].date);
@@ -108,34 +132,44 @@ function simulateDca(history: AnalysisPoint[], months: number, amount: number): 
   startLimit.setUTCMonth(startLimit.getUTCMonth() - months);
   const start = startLimit.toISOString().slice(0, 10);
   if (history[0].date > start) return null;
-  const window = history.filter((point) => point.date >= start);
-  // First trading day of each calendar month.
-  const buys: AnalysisPoint[] = [];
-  let lastMonth = "";
-  for (const point of window) {
-    const month = point.date.slice(0, 7);
-    if (month !== lastMonth) { buys.push(point); lastMonth = month; }
+  const zones = zoneFlags(history);
+  const firstIndex = history.findIndex((point) => point.date >= start);
+  // Group trading days by calendar month.
+  const monthsMap = new Map<string, number[]>();
+  for (let index = firstIndex; index < history.length; index += 1) {
+    const key = history[index].date.slice(0, 7);
+    const list = monthsMap.get(key) ?? [];
+    list.push(index);
+    monthsMap.set(key, list);
   }
-  if (buys.length < 2) return null;
+  if (monthsMap.size < 2) return null;
+  const zoneBuys = new Set<number>();
+  const baseBuys = new Set<number>();
+  let zonePurchases = 0;
+  for (const days of monthsMap.values()) {
+    baseBuys.add(days[0]);
+    const inZone = days.find((index) => zones[index]);
+    if (inZone !== undefined) zonePurchases += 1;
+    zoneBuys.add(inZone ?? days[days.length - 1]);
+  }
   let units = 0;
+  let baseUnits = 0;
   let invested = 0;
-  const total = amount * buys.length;
-  const lumpUnits = total / buys[0].adjClose;
-  const buyDates = new Set(buys.map((buy) => buy.date));
+  const flows: Array<{ date: string; amount: number }> = [];
   const series: DcaResult["series"] = [];
-  for (const point of window) {
-    if (buyDates.has(point.date)) { units += amount / point.adjClose; invested += amount; }
-    series.push({ date: point.date, invested: Number(invested.toFixed(2)), value: Number((units * point.adjClose).toFixed(2)), lump: Number((lumpUnits * point.adjClose).toFixed(2)) });
+  for (let index = firstIndex; index < history.length; index += 1) {
+    const point = history[index];
+    if (zoneBuys.has(index)) { units += amount / point.adjClose; invested += amount; flows.push({ date: point.date, amount: -amount }); }
+    if (baseBuys.has(index)) baseUnits += amount / point.adjClose;
+    series.push({ date: point.date, invested: Number(invested.toFixed(2)), value: Number((units * point.adjClose).toFixed(2)), baseline: Number((baseUnits * point.adjClose).toFixed(2)) });
   }
   const value = units * last.adjClose;
-  const lumpValue = lumpUnits * last.adjClose;
-  const flows = [...buys.map((buy) => ({ date: buy.date, amount: -amount })), { date: last.date, amount: value }];
-  const years = (Date.parse(last.date) - Date.parse(buys[0].date)) / (365.25 * 86_400_000);
-  const avgCost = invested / units;
+  const baselineValue = baseUnits * last.adjClose;
+  flows.push({ date: last.date, amount: value });
   return {
-    invested, value, gain: (value / invested - 1) * 100, lumpValue, lumpGain: (lumpValue / total - 1) * 100,
-    irr: xirr(flows), lumpCagr: years >= 0.98 ? (Math.pow(lumpValue / total, 1 / years) - 1) * 100 : null,
-    avgCostVsNow: (avgCost / last.adjClose - 1) * 100, purchases: buys.length, series,
+    invested, value, gain: (value / invested - 1) * 100, irr: xirr(flows),
+    avgCostVsNow: (invested / units / last.adjClose - 1) * 100, purchases: monthsMap.size, zonePurchases,
+    baselineValue, baselineDiff: (value / baselineValue - 1) * 100, series,
   };
 }
 
@@ -143,8 +177,8 @@ function DcaSimulator({ history, loading }: { history: AnalysisPoint[]; loading:
   const [months, setMonths] = useState(36);
   const [amount, setAmount] = useState(100);
   const result = useMemo(() => simulateDca(history, months, amount), [history, months, amount]);
-  const options = [{ months: 12, label: "1 año" }, { months: 36, label: "3 años" }, { months: 60, label: "5 años" }];
-  return <Section title="Simulador DCA" subtitle="Compra el primer día hábil de cada mes con dividendos reinvertidos (precio ajustado). Como referencia, muestra qué habría pasado si ese mismo total hubiera estado disponible e invertido desde el primer día.">
+  const options = [{ months: 12, label: "1 año" }, { months: 36, label: "3 años" }];
+  return <Section title="Simulador DCA en zonas de descuento" subtitle="Cada mes compra el primer día en zona de descuento (señal Interesante o Nivel JB de 60 o más). Si ese mes no hubo zona, compra el último día hábil: nunca se salta un aporte. Dividendos reinvertidos.">
     <div className="mt-3 flex flex-wrap items-center gap-2">
       <label className="flex items-center gap-2 rounded-xl border border-card-border bg-card px-3 py-1.5 text-xs">
         <span className="text-muted-foreground">Aporte mensual $</span>
@@ -155,15 +189,14 @@ function DcaSimulator({ history, loading }: { history: AnalysisPoint[]; loading:
     {loading ? <div className="mt-3 h-40 animate-pulse rounded-xl bg-card" /> : !result ? <p className="mt-3 rounded-xl bg-card px-3 py-3 text-xs text-muted-foreground">No hay historia suficiente para simular {months / 12} año{months > 12 ? "s" : ""} con este activo.</p> : <>
       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Metric label="Aportado" value={money(result.invested)} note={`${result.purchases} compras mensuales`} />
-        <Metric label="Valor hoy (DCA)" value={money(result.value)} note={`${pct(result.gain)} sobre lo aportado`} tone={band(result.gain, (v) => v > 0, (v) => v < 0)} />
-        <Metric label="Rendimiento anual DCA" value={pct(result.irr)} note="Tasa interna de retorno de tus aportes (TIR)" tone={band(result.irr, (v) => v >= 7, (v) => v < 0)} />
-        <Metric label="Si tenías todo el día 1" value={money(result.lumpValue)} note={`Otra situación: todo invertido desde el inicio · ${result.lumpCagr === null ? "menos de 1 año" : `${pct(result.lumpCagr)} anual`}`} />
+        <Metric label="Valor hoy" value={money(result.value)} note={`${pct(result.gain)} sobre lo aportado`} tone={band(result.gain, (v) => v > 0, (v) => v < 0)} />
+        <Metric label="Rendimiento anual" value={pct(result.irr)} note="Tasa interna de retorno de tus aportes (TIR)" tone={band(result.irr, (v) => v >= 7, (v) => v < 0)} />
+        <Metric label="Compras en zona" value={`${result.zonePurchases} de ${result.purchases}`} note="Meses en que tu aporte entró con descuento" />
       </div>
       <p className="mt-2 rounded-xl bg-card px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
         Tu costo promedio quedó <strong className="text-foreground">{pct(Math.abs(result.avgCostVsNow), 1, false)} {result.avgCostVsNow <= 0 ? "por debajo" : "por encima"}</strong> del precio actual.{" "}
-        {result.irr !== null && result.lumpCagr !== null
-          ? <>Por cada dólar, tu DCA rindió <strong className="text-foreground">{pct(result.irr)} anual</strong>{result.irr >= result.lumpCagr ? ", igual o más que" : " frente al"} {pct(result.lumpCagr)} anual de tenerlo todo el día 1. Si ese saldo final es mayor, es porque ese dinero estuvo invertido todo el periodo; con aportes mensuales, cada dólar está invertido en promedio la mitad del tiempo. Si inviertes de tu ingreso mensual, el DCA es tu forma natural de invertir.</>
-          : "Con aportes mensuales cada dólar está invertido en promedio la mitad del tiempo. La referencia del día 1 solo aplica si ya tenías todo ese dinero al inicio."}
+        Comprando siempre el día 1 del mes habrías terminado con {money(result.baselineValue)} ({pct(result.baselineDiff, 1)} de diferencia). En pruebas de 25 a 55 años el resultado de ambos métodos es prácticamente el mismo: la clave es no dejar de comprar.{" "}
+        <a href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/metodologia`} className="font-bold text-primary hover:underline">Ver metodología y evidencia</a>
       </p>
       <div className="mt-3 h-[210px]">
         <ResponsiveContainer width="100%" height="100%">
@@ -174,8 +207,8 @@ function DcaSimulator({ history, loading }: { history: AnalysisPoint[]; loading:
             <Tooltip labelFormatter={(label) => shortDate(String(label))} formatter={(value: number, name: string) => [money(value), name]} contentStyle={TOOLTIP_STYLE} />
             <Legend verticalAlign="top" align="right" iconType="plainline" wrapperStyle={{ fontSize: 10, paddingBottom: 6 }} />
             <Area type="stepAfter" dataKey="invested" name="Aportado" stroke={COLORS.muted} strokeDasharray="4 3" fill={COLORS.muted} fillOpacity={0.08} strokeWidth={1.5} isAnimationActive={false} />
-            <Line type="monotone" dataKey="value" name="Valor DCA" stroke={COLORS.coral} strokeWidth={2} dot={false} isAnimationActive={false} />
-            <Line type="monotone" dataKey="lump" name="Si tenías todo el día 1" stroke={COLORS.teal} strokeWidth={2} strokeDasharray="6 3" dot={false} isAnimationActive={false} />
+            <Line type="monotone" dataKey="baseline" name="Comprando el día 1" stroke={COLORS.sky} strokeWidth={1.5} strokeDasharray="5 3" dot={false} isAnimationActive={false} />
+            <Line type="monotone" dataKey="value" name="Comprando en zona" stroke={COLORS.coral} strokeWidth={2.2} dot={false} isAnimationActive={false} />
           </ComposedChart>
         </ResponsiveContainer>
       </div>

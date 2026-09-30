@@ -95,6 +95,19 @@ rewrites `/api/*` to the API domain and everything else to `index.html`.
 - Vercel Web Analytics script is in `index.html`; it only records once Analytics is enabled in the
   project dashboard.
 
+## Evidence (Sept 2026) — read before changing claims
+
+- Long backtest (8 assets: SPY, QQQ, DIA, IWM, EFA, KO, JNJ, MSFT; daily data from `/api/market/history/:ticker`,
+  213 rolling 10-year windows, $200/month, dividends reinvested, idle cash 3%): buying in JB discount zones
+  (Interesante or Nivel ≥ 60) gives practically the same result as plain monthly DCA (median diff ≈ 0,
+  wins 43–56% of windows). 12-month returns after Interesante ≈ any day. The 5-year VOO edge was period-specific.
+- Product rule agreed with Jesús: the app never claims the signal beats DCA or the market. Its value is buying
+  with a discount and calm. Page `/metodologia` (`components/methodology-page.tsx`) holds the numbers; update it
+  if the backtest is rerun.
+- DCA simulator (`asset-insights.tsx`): buys on the first zone day of each month, else last trading day; shows
+  zone purchases and the day-1 DCA baseline; the lump-sum comparison was removed on purpose. 1 and 3 years only
+  (zones need one year of warm-up inside the 5-year history).
+
 ## Known gaps after leaving Replit
 
 - Product image uploads: `src/lib/objectStorage.ts` and `src/routes/storage.ts` call the Replit
