@@ -144,7 +144,7 @@ function DcaSimulator({ history, loading }: { history: AnalysisPoint[]; loading:
   const [amount, setAmount] = useState(100);
   const result = useMemo(() => simulateDca(history, months, amount), [history, months, amount]);
   const options = [{ months: 12, label: "1 año" }, { months: 36, label: "3 años" }, { months: 60, label: "5 años" }];
-  return <Section title="Simulador DCA" subtitle="Compra el primer día hábil de cada mes con dividendos reinvertidos (precio ajustado). Compara con invertir todo el mismo monto el primer día.">
+  return <Section title="Simulador DCA" subtitle="Compra el primer día hábil de cada mes con dividendos reinvertidos (precio ajustado). Como referencia, muestra qué habría pasado si ese mismo total hubiera estado disponible e invertido desde el primer día.">
     <div className="mt-3 flex flex-wrap items-center gap-2">
       <label className="flex items-center gap-2 rounded-xl border border-card-border bg-card px-3 py-1.5 text-xs">
         <span className="text-muted-foreground">Aporte mensual $</span>
@@ -157,11 +157,13 @@ function DcaSimulator({ history, loading }: { history: AnalysisPoint[]; loading:
         <Metric label="Aportado" value={money(result.invested)} note={`${result.purchases} compras mensuales`} />
         <Metric label="Valor hoy (DCA)" value={money(result.value)} note={`${pct(result.gain)} sobre lo aportado`} tone={band(result.gain, (v) => v > 0, (v) => v < 0)} />
         <Metric label="Rendimiento anual DCA" value={pct(result.irr)} note="Tasa interna de retorno de tus aportes (TIR)" tone={band(result.irr, (v) => v >= 7, (v) => v < 0)} />
-        <Metric label="Todo de golpe" value={money(result.lumpValue)} note={`${pct(result.lumpGain)} · ${result.lumpCagr === null ? "menos de 1 año" : `${pct(result.lumpCagr)} anual`}`} />
+        <Metric label="Si tenías todo el día 1" value={money(result.lumpValue)} note={`Otra situación: todo invertido desde el inicio · ${result.lumpCagr === null ? "menos de 1 año" : `${pct(result.lumpCagr)} anual`}`} />
       </div>
       <p className="mt-2 rounded-xl bg-card px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
         Tu costo promedio quedó <strong className="text-foreground">{pct(Math.abs(result.avgCostVsNow), 1, false)} {result.avgCostVsNow <= 0 ? "por debajo" : "por encima"}</strong> del precio actual.{" "}
-        {result.value >= result.lumpValue ? "En este tramo el DCA superó a invertir todo de golpe: los aportes se beneficiaron de las caídas." : "En este tramo invertir todo de golpe habría rendido más: el activo subió de forma sostenida y el DCA compró cada vez más caro."}
+        {result.irr !== null && result.lumpCagr !== null
+          ? <>Por cada dólar, tu DCA rindió <strong className="text-foreground">{pct(result.irr)} anual</strong>{result.irr >= result.lumpCagr ? ", igual o más que" : " frente al"} {pct(result.lumpCagr)} anual de tenerlo todo el día 1. Si ese saldo final es mayor, es porque ese dinero estuvo invertido todo el periodo; con aportes mensuales, cada dólar está invertido en promedio la mitad del tiempo. Si inviertes de tu ingreso mensual, el DCA es tu forma natural de invertir.</>
+          : "Con aportes mensuales cada dólar está invertido en promedio la mitad del tiempo. La referencia del día 1 solo aplica si ya tenías todo ese dinero al inicio."}
       </p>
       <div className="mt-3 h-[210px]">
         <ResponsiveContainer width="100%" height="100%">
@@ -173,7 +175,7 @@ function DcaSimulator({ history, loading }: { history: AnalysisPoint[]; loading:
             <Legend verticalAlign="top" align="right" iconType="plainline" wrapperStyle={{ fontSize: 10, paddingBottom: 6 }} />
             <Area type="stepAfter" dataKey="invested" name="Aportado" stroke={COLORS.muted} strokeDasharray="4 3" fill={COLORS.muted} fillOpacity={0.08} strokeWidth={1.5} isAnimationActive={false} />
             <Line type="monotone" dataKey="value" name="Valor DCA" stroke={COLORS.coral} strokeWidth={2} dot={false} isAnimationActive={false} />
-            <Line type="monotone" dataKey="lump" name="Todo de golpe" stroke={COLORS.teal} strokeWidth={2} strokeDasharray="6 3" dot={false} isAnimationActive={false} />
+            <Line type="monotone" dataKey="lump" name="Si tenías todo el día 1" stroke={COLORS.teal} strokeWidth={2} strokeDasharray="6 3" dot={false} isAnimationActive={false} />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
