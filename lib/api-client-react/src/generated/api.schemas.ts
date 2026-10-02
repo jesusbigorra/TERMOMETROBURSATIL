@@ -159,6 +159,18 @@ export interface SaleInput {
   items: SaleItemInput[];
 }
 
+/**
+ * Empty strings are allowed so imported sales that never had a value can be saved untouched.
+ */
+export interface SaleCustomerUpdate {
+  /** @maxLength 120 */
+  customerName: string;
+  /** @maxLength 40 */
+  customerIdNumber: string;
+  /** @maxLength 40 */
+  customerPhone: string;
+}
+
 export interface SaleItem {
   id: string;
   productId: string;

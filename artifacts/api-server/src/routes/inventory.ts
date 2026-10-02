@@ -21,6 +21,9 @@ import {
   UpdateProductBody,
   UpdateProductParams,
   UpdateProductResponse,
+  UpdateSaleCustomerBody,
+  UpdateSaleCustomerParams,
+  UpdateSaleCustomerResponse,
 } from "@workspace/api-zod";
 import {
   db,
@@ -418,6 +421,40 @@ router.post("/sales", requireAuth, async (req, res): Promise<void> => {
     req.log.warn({ err: error }, "Could not create sale");
     res.status(400).json({ error: error instanceof Error ? error.message : "No se pudo registrar la venta." });
   }
+});
+
+// Post-sale correction of the customer's data only. Amounts, items and stock are never touched,
+// so receipts and accounting stay exactly as they were registered.
+router.patch("/sales/:id", requireAuth, async (req, res): Promise<void> => {
+  const params = UpdateSaleCustomerParams.safeParse(req.params);
+  const body = UpdateSaleCustomerBody.safeParse(req.body);
+  if (!params.success || !body.success) {
+    res.status(400).json({ error: "Los datos del cliente no son válidos." });
+    return;
+  }
+  const next = {
+    customerName: body.data.customerName.trim(),
+    customerIdNumber: body.data.customerIdNumber.trim(),
+    customerPhone: body.data.customerPhone.trim(),
+  };
+  const sale = await db.transaction(async (tx) => {
+    const [current] = await tx.select().from(salesTable).where(eq(salesTable.id, params.data.id)).for("update");
+    if (!current) return null;
+    const changed = [
+      current.customerName !== next.customerName ? "nombre" : null,
+      current.customerIdNumber !== next.customerIdNumber ? "cédula" : null,
+      current.customerPhone !== next.customerPhone ? "teléfono" : null,
+    ].filter((field): field is string => field !== null);
+    if (changed.length === 0) return current;
+    const [updated] = await tx.update(salesTable).set(next).where(eq(salesTable.id, current.id)).returning();
+    await tx.insert(inventoryActivityTable).values({ id: randomUUID(), kind: "ajuste", title: `Cliente corregido ${current.receiptNumber}`, detail: `Se actualizó: ${changed.join(", ")}` });
+    return updated;
+  });
+  if (!sale) {
+    res.status(404).json({ error: "Venta no encontrada." });
+    return;
+  }
+  res.json(UpdateSaleCustomerResponse.parse(await saleJson(sale)));
 });
 
 router.get("/inventory/dashboard", async (_req, res): Promise<void> => {

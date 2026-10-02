@@ -43,6 +43,7 @@ import type {
   PurchasePreview,
   PurchaseUploadInput,
   Sale,
+  SaleCustomerUpdate,
   SaleInput,
   SearchMarketInstrumentsParams,
   UploadUrlRequest,
@@ -1107,6 +1108,78 @@ export const useCreateSale = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getCreateSaleMutationOptions(options));
+    }
+
+export const getUpdateSaleCustomerUrl = (id: string,) => {
+
+
+
+
+  return `/api/sales/${id}`
+}
+
+/**
+ * @summary Corrects the customer data of a registered sale (never amounts, items or stock)
+ */
+export const updateSaleCustomer = async (id: string,
+    saleCustomerUpdate: SaleCustomerUpdate, options?: Parameters<typeof customFetch>[1]): Promise<Sale> => {
+
+  return customFetch<Sale>(getUpdateSaleCustomerUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(saleCustomerUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateSaleCustomerMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSaleCustomer>>, TError,{id: string;data: BodyType<SaleCustomerUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSaleCustomer>>, TError,{id: string;data: BodyType<SaleCustomerUpdate>}, TContext> => {
+
+const mutationKey = ['updateSaleCustomer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSaleCustomer>>, {id: string;data: BodyType<SaleCustomerUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateSaleCustomer(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateSaleCustomerMutationResult = NonNullable<Awaited<ReturnType<typeof updateSaleCustomer>>>
+    export type UpdateSaleCustomerMutationBody = BodyType<SaleCustomerUpdate>
+    export type UpdateSaleCustomerMutationError = ErrorType<void>
+
+    /**
+ * @summary Corrects the customer data of a registered sale (never amounts, items or stock)
+ */
+export const useUpdateSaleCustomer = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSaleCustomer>>, TError,{id: string;data: BodyType<SaleCustomerUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateSaleCustomer>>,
+        TError,
+        {id: string;data: BodyType<SaleCustomerUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateSaleCustomerMutationOptions(options));
     }
 
 export const getHealthCheckUrl = () => {

@@ -427,6 +427,50 @@ export const CreateSaleResponse = zod.object({
 
 
 /**
+ * @summary Corrects the customer data of a registered sale (never amounts, items or stock)
+ */
+export const UpdateSaleCustomerParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const updateSaleCustomerBodyCustomerNameMax = 120;
+
+export const updateSaleCustomerBodyCustomerIdNumberMax = 40;
+
+export const updateSaleCustomerBodyCustomerPhoneMax = 40;
+
+
+export const UpdateSaleCustomerBody = zod.object({
+  "customerName": zod.string().max(updateSaleCustomerBodyCustomerNameMax),
+  "customerIdNumber": zod.string().max(updateSaleCustomerBodyCustomerIdNumberMax),
+  "customerPhone": zod.string().max(updateSaleCustomerBodyCustomerPhoneMax)
+})
+
+export const UpdateSaleCustomerResponse = zod.object({
+  "id": zod.string(),
+  "receiptNumber": zod.string(),
+  "paymentMethod": zod.string(),
+  "customerName": zod.string(),
+  "customerIdNumber": zod.string(),
+  "customerPhone": zod.string(),
+  "subtotal": zod.number(),
+  "total": zod.number(),
+  "amountReceived": zod.number().nullable(),
+  "changeDue": zod.number(),
+  "createdAt": zod.string(),
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "productId": zod.string(),
+  "productName": zod.string(),
+  "quantity": zod.number(),
+  "unitPrice": zod.number(),
+  "unitCost": zod.number(),
+  "subtotal": zod.number()
+}))
+})
+
+
+/**
  * Returns server health status
  * @summary Health check
  */

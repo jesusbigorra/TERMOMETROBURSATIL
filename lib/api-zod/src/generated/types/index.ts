@@ -40,6 +40,7 @@ export * from './purchasePreviewItemStatus';
 export * from './purchaseUploadInput';
 export * from './radarSummary';
 export * from './sale';
+export * from './saleCustomerUpdate';
 export * from './saleInput';
 export * from './saleInputPaymentMethod';
 export * from './saleItem';

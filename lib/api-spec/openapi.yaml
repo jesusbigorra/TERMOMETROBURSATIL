@@ -266,6 +266,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/Sale"
         "400": { description: Invalid sale or insufficient stock }
+  /sales/{id}:
+    patch:
+      operationId: updateSaleCustomer
+      tags: [sales]
+      summary: Corrects the customer data of a registered sale (never amounts, items or stock)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaleCustomerUpdate"
+      responses:
+        "200":
+          description: Updated sale
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sale"
+        "400": { description: Invalid customer data }
+        "404": { description: Sale not found }
   /healthz:
     get:
       operationId: healthCheck
@@ -566,6 +591,14 @@ components:
           items:
             $ref: "#/components/schemas/SaleItemInput"
       required: [paymentMethod, amountReceived, customerName, customerIdNumber, customerPhone, items]
+    SaleCustomerUpdate:
+      type: object
+      description: Empty strings are allowed so imported sales that never had a value can be saved untouched.
+      properties:
+        customerName: { type: string, maxLength: 120 }
+        customerIdNumber: { type: string, maxLength: 40 }
+        customerPhone: { type: string, maxLength: 40 }
+      required: [customerName, customerIdNumber, customerPhone]
     SaleItem:
       type: object
       properties:
