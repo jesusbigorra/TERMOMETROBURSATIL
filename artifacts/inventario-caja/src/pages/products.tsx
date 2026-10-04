@@ -62,6 +62,32 @@ const productSchema = z.object({
 
 type ProductFormValues = z.infer<typeof productSchema>;
 
+// Vercel rejects requests above 4.5 MB, and phone photos are often larger, so every photo is
+// shrunk in the browser (longest side 1600 px, JPEG) before it is uploaded.
+const MAX_UPLOAD_BYTES = 4.4 * 1024 * 1024;
+const MAX_PICKED_BYTES = 25 * 1024 * 1024;
+
+async function prepareProductImage(file: File): Promise<File> {
+  try {
+    const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext("2d");
+    if (!context) return file;
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], `${file.name.replace(/\.[^.]+$/, "") || "foto"}.jpg`, { type: "image/jpeg" });
+  } catch {
+    return file;
+  }
+}
+
 export default function ProductsPage() {
   const { isSignedIn } = useAuth();
   const { toast } = useToast();
@@ -139,14 +165,16 @@ export default function ProductsPage() {
   const handleOpenDelete = (product: Product) => {
     setProductToDelete(product);
   };
-  const handleImageUpload = async (file?: File) => {
-    if (!file) return;
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) {
-      toast({ title: "Foto no válida", description: "Usa JPG, PNG o WEBP de hasta 5 MB.", variant: "destructive" });
+  const handleImageUpload = async (picked?: File) => {
+    if (!picked) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(picked.type) || picked.size > MAX_PICKED_BYTES) {
+      toast({ title: "Foto no válida", description: "Usa JPG, PNG o WEBP de hasta 25 MB.", variant: "destructive" });
       return;
     }
     setIsUploadingImage(true);
     try {
+      const file = await prepareProductImage(picked);
+      if (file.size > MAX_UPLOAD_BYTES) throw new Error("La foto sigue siendo demasiado pesada. Prueba con otra.");
       const request = await fetch("/api/storage/uploads/request-url", {
         method: "POST",
         credentials: "include",
@@ -422,7 +450,7 @@ export default function ProductsPage() {
                       ) : (
                         <p className="text-sm text-muted-foreground"><Link href="/sign-in" className="font-medium text-primary underline">Inicia sesión</Link> para cargar una foto.</p>
                       )}
-                      <p className="text-xs text-muted-foreground">JPG, PNG o WEBP · máximo 5 MB.</p>
+                      <p className="text-xs text-muted-foreground">JPG, PNG o WEBP. La foto se reduce sola al cargarla.</p>
                     </div>
                   </div>
                   <FormMessage />
