@@ -68,9 +68,9 @@ test("el rendimiento por dividendo suma solo los últimos 12 meses", () => {
   assert.equal(computeTrailingDividendYield(dividends, undefined, last), null);
 });
 
-test("el volumen diario promedio usa las últimas 63 sesiones y exige al menos 20", () => {
+test("el volumen diario promedio usa las últimas 30 sesiones y exige al menos 20", () => {
   assert.equal(computeAvgDollarVolume(Array.from({ length: 19 }, () => 1_000_000)), null);
-  const values = [...Array.from({ length: 100 }, () => 9_000_000), ...Array.from({ length: 63 }, () => 2_000_000)];
+  const values = [...Array.from({ length: 100 }, () => 9_000_000), ...Array.from({ length: 30 }, () => 2_000_000)];
   assert.equal(computeAvgDollarVolume(values), 2_000_000);
 });
 
@@ -79,8 +79,8 @@ test("el costo y la poca liquidez restan puntos", () => {
   assert.equal(scoreIdea(candidate("AAA", 20, { expenseRatio: 0.09 })), 70);
   assert.equal(scoreIdea(candidate("AAA", 20, { expenseRatio: 0.72 })), 64.8);
   assert.equal(scoreIdea(candidate("AAA", 20, { expenseRatio: 5 })), 62);
-  assert.equal(scoreIdea(candidate("AAA", 20, { avgDollarVolume: 4_999_999 })), 65);
-  assert.equal(scoreIdea(candidate("AAA", 20, { avgDollarVolume: 5_000_000 })), 70);
+  assert.equal(scoreIdea(candidate("AAA", 20, { avgDollarVolume: 9_999_999 })), 65);
+  assert.equal(scoreIdea(candidate("AAA", 20, { avgDollarVolume: 10_000_000 })), 70);
 });
 
 test("el puntaje suma retorno y tendencia y resta la caída máxima", () => {
@@ -129,7 +129,11 @@ test("el universo no repite tickers, trae ratio de gastos y estilo válidos y cu
   assert.equal(EMERGING_MARKET_ETF_UNIVERSE.every((entry) => entry.style === "Capitalización" || entry.style === "Reglas propias"), true);
   const byTicker = new Map(EMERGING_MARKET_ETF_UNIVERSE.map((entry) => [entry.ticker, entry]));
   assert.equal(byTicker.get("EEM")?.expenseRatio, 0.72);
+  assert.equal(byTicker.get("EEM")?.category, "cap-weighted");
+  assert.equal(byTicker.get("FNDE")?.category, "smart-beta");
   assert.equal(byTicker.get("FNDE")?.style, "Reglas propias");
+  assert.equal(byTicker.get("DEM")?.category, "dividend");
+  assert.equal(byTicker.get("DEM")?.style, "Reglas propias");
   assert.equal(byTicker.get("EMXC")?.style, "Capitalización");
   assert.match(EXPENSE_RATIOS_AS_OF, /^\d{4}-\d{2}-\d{2}$/);
   assert.ok(new Set(EMERGING_MARKET_ETF_UNIVERSE.map((entry) => entry.region)).size >= 15);
@@ -167,7 +171,7 @@ test("usa la caché de 24 horas para no repetir la evaluación pública", async 
     assert.equal(first.expenseRatiosAsOf, EXPENSE_RATIOS_AS_OF);
     assert.equal(first.ideas[0].dividendYield, Number(((2 / 304) * 100).toFixed(2)));
     assert.equal(first.ideas[0].maxDrawdown, 0);
-    assert.equal(first.ideas.every((idea) => idea.avgDollarVolume !== null && idea.avgDollarVolume > 5_000_000), true);
+    assert.equal(first.ideas.every((idea) => idea.avgDollarVolume !== null && idea.avgDollarVolume > 10_000_000), true);
     assert.equal(first.ideas.every((idea) => typeof idea.indexStyle === "string"), true);
     assert.equal(second.cached, true);
     assert.equal(calls, callsAfterFirst);
