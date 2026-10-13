@@ -33,12 +33,12 @@ function stripBase(path: string): string {
 }
 
 const CHART_COLORS = {
-  coral: "#4668f0",
-  teal: "#0b8a4a",
-  sky: "#1d9bd1",
-  amber: "#e0a020",
-  ink: "#0b1b2b",
-  red: "#c23a2d",
+  coral: "#e46442",
+  teal: "#2e887f",
+  sky: "#3b8daf",
+  amber: "#d89b36",
+  ink: "#203746",
+  red: "#be554a",
 };
 
 function encodeBase64Url(value: string) {
@@ -365,7 +365,7 @@ function SignalBadge({ value }: { value: string }) {
 
 function MarketThermometerMark() {
   return (
-    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-background text-foreground shadow-lg shadow-foreground/10 sm:h-16 sm:w-16" aria-hidden="true">
+    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-foreground text-background shadow-lg shadow-foreground/10 sm:h-16 sm:w-16" aria-hidden="true">
       <svg viewBox="0 0 64 64" className="h-10 w-10 sm:h-11 sm:w-11" fill="none">
         <path d="M21 12v27.5a10 10 0 1 0 8 0V12a4 4 0 0 0-8 0Z" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" />
         <path d="M25 28v17" stroke="hsl(var(--primary))" strokeWidth="4.5" strokeLinecap="round" />
@@ -1319,14 +1319,14 @@ function Dashboard() {
       <Sidebar isDark={isDark} setIsDark={setIsDark} />
       <main className="min-h-[100dvh] min-w-0 lg:ml-[238px]">
         <div className="mx-auto min-w-0 max-w-[1480px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
-          <header className="dashboard-reveal mb-8 flex min-w-0 flex-col gap-6 rounded-[2rem] bg-primary p-6 text-primary-foreground sm:p-10 lg:flex-row lg:items-end lg:justify-between">
+          <header className="dashboard-reveal mb-6 flex min-w-0 flex-col gap-5 border-b border-border pb-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
-              <div className="flex items-center gap-2"><span className="eyebrow-dot !bg-primary-foreground !shadow-none" /><span className="font-mono-app text-[10px] font-medium uppercase tracking-[0.18em] text-primary-foreground/80">Jornada de mercado · Madrid / NY</span></div>
+              <div className="flex items-center gap-2"><span className="eyebrow-dot" /><span className="font-mono-app text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">Jornada de mercado · Madrid / NY</span></div>
               <div className="mt-4 flex items-center gap-3 sm:gap-4">
                 <MarketThermometerMark />
-                <h1 className="font-display text-[clamp(2.2rem,5vw,4.6rem)] font-extrabold leading-[.92] tracking-[-.045em]"><span className="block">TERMÓMETRO</span><span className="mt-1 block text-primary-foreground/80">BURSÁTIL</span></h1>
+                <h1 className="font-display text-[clamp(2rem,4.6vw,4.2rem)] font-bold leading-[.84] tracking-[-.08em]"><span className="block">TERMÓMETRO</span><span className="mt-2 block text-primary">BURSÁTIL</span></h1>
               </div>
-              <p className="mt-5 max-w-xl text-base leading-relaxed text-primary-foreground/90">Lee el pulso del mercado antes de mover ficha.</p>
+              <p className="mt-5 max-w-xl text-sm leading-relaxed text-muted-foreground">Lee el pulso del mercado antes de mover ficha.</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <div className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs ${retainedRadar ? "border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-700 dark:bg-amber-950/35 dark:text-amber-100" : "border-card-border bg-card"}`}><span className={`h-2 w-2 rounded-full ${retainedRadar ? "bg-amber-500" : healthQuery.data ? "bg-accent live-dot" : healthQuery.isLoading ? "bg-amber-500" : "bg-destructive"}`} /><span className="font-bold">{retainedRadar ? "Última lectura disponible" : statusLabel(radar?.marketStatus)}</span><span className="text-muted-foreground">· {retainedRadar ? `${dataAge} · no es tiempo real` : updatedLabel}{radar?.cached && !retainedRadar ? " · caché" : ""}</span></div>
