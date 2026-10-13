@@ -2,69 +2,39 @@ import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { logger } from "./logger";
+import etfMetadata from "./etf-metadata.json" with { type: "json" };
 
 type IndexStyle = "Capitalización" | "Reglas propias";
-type UniverseEntry = { ticker: string; name: string; region: string; expenseRatio: number | null; style: IndexStyle };
-
-const CAP: IndexStyle = "Capitalización";
-const RULES: IndexStyle = "Reglas propias";
-/**
- * Expense ratios (percent per year) are kept by hand because no free server-side
- * source exists. Reviewed against stockanalysis.com (and Nasdaq / ETF Central for
- * IEMG, EEM, VWO and SPEM). Update the date when the table is re-checked.
- * "Reglas propias" groups every fund that does not weight by market cap:
- * fundamentals, dividends, factors, themes and rule-based exclusions.
- */
-export const EXPENSE_RATIOS_AS_OF = "2026-10-13";
-
-const GLOBAL = "Emergentes (global)";
+type FundCategory = "cap-weighted" | "smart-beta" | "dividend";
+type UniverseEntry = { ticker: string; name: string; region: string; expenseRatio: number | null; category: FundCategory; style: IndexStyle };
+type MetadataFund = { ticker: string; name: string; region: string; expenseRatio: number; category: FundCategory };
 
 /**
- * Candidate pool. The region is only a label shown on the card: ranking never
- * looks at it, so if the five best ETFs all happen to be in one country, all
- * five are shown.
+ * Fund metadata (name, region, expense ratio, category) lives in the static
+ * dictionary etf-metadata.json so the costs can be revised without touching this
+ * logic. Expense ratios are hand-kept (no free server-side source); category
+ * drives the "Solo indexados por capitalización" toggle:
+ * cap-weighted → "Capitalización"; smart-beta and dividend → "Reglas propias".
  */
-export const EMERGING_MARKET_ETF_UNIVERSE: readonly UniverseEntry[] = [
-  // Broad emerging-market funds
-  { ticker: "IEMG", name: "iShares Core MSCI Emerging Markets ETF", region: GLOBAL, expenseRatio: 0.09, style: CAP },
-  { ticker: "EEM", name: "iShares MSCI Emerging Markets ETF", region: GLOBAL, expenseRatio: 0.72, style: CAP },
-  { ticker: "VWO", name: "Vanguard FTSE Emerging Markets ETF", region: GLOBAL, expenseRatio: 0.06, style: CAP },
-  { ticker: "SPEM", name: "SPDR Portfolio Emerging Markets ETF", region: GLOBAL, expenseRatio: 0.07, style: CAP },
-  { ticker: "SCHE", name: "Schwab Emerging Markets Equity ETF", region: GLOBAL, expenseRatio: 0.06, style: CAP },
-  { ticker: "EMXC", name: "iShares MSCI Emerging Markets ex China ETF", region: "Emergentes sin China", expenseRatio: 0.25, style: CAP },
-  { ticker: "XSOE", name: "WisdomTree Emerging Markets ex-State-Owned Enterprises Fund", region: GLOBAL, expenseRatio: 0.32, style: RULES },
-  { ticker: "FNDE", name: "Schwab Fundamental Emerging Markets Large Company ETF", region: GLOBAL, expenseRatio: 0.39, style: RULES },
-  { ticker: "FRDM", name: "Freedom 100 Emerging Markets ETF", region: GLOBAL, expenseRatio: 0.49, style: RULES },
-  { ticker: "AVEM", name: "Avantis Emerging Markets Equity ETF", region: GLOBAL, expenseRatio: 0.33, style: RULES },
-  { ticker: "DFAE", name: "Dimensional Emerging Core Equity Market ETF", region: GLOBAL, expenseRatio: 0.29, style: RULES },
-  { ticker: "EEMV", name: "iShares MSCI Emerging Markets Min Vol Factor ETF", region: GLOBAL, expenseRatio: 0.25, style: RULES },
-  { ticker: "EMGF", name: "iShares MSCI Emerging Markets Multifactor ETF", region: GLOBAL, expenseRatio: 0.26, style: RULES },
-  { ticker: "DEM", name: "WisdomTree Emerging Markets High Dividend Fund", region: GLOBAL, expenseRatio: 0.63, style: RULES },
-  { ticker: "DVYE", name: "iShares Emerging Markets Dividend ETF", region: GLOBAL, expenseRatio: 0.50, style: RULES },
-  // Single-country and regional funds
-  { ticker: "INDA", name: "iShares MSCI India ETF", region: "India", expenseRatio: 0.61, style: CAP },
-  { ticker: "EPI", name: "WisdomTree India Earnings Fund", region: "India", expenseRatio: 0.84, style: RULES },
-  { ticker: "EWZ", name: "iShares MSCI Brazil ETF", region: "Brasil", expenseRatio: 0.59, style: CAP },
-  { ticker: "EWW", name: "iShares MSCI Mexico ETF", region: "México", expenseRatio: 0.50, style: CAP },
-  { ticker: "ECH", name: "iShares MSCI Chile ETF", region: "Chile", expenseRatio: 0.59, style: CAP },
-  { ticker: "ARGT", name: "Global X MSCI Argentina ETF", region: "Argentina", expenseRatio: 0.59, style: CAP },
-  { ticker: "ILF", name: "iShares Latin America 40 ETF", region: "Latinoamérica", expenseRatio: 0.47, style: CAP },
-  { ticker: "EWT", name: "iShares MSCI Taiwan ETF", region: "Taiwán", expenseRatio: 0.59, style: CAP },
-  { ticker: "EWY", name: "iShares MSCI South Korea ETF", region: "Corea del Sur", expenseRatio: 0.59, style: CAP },
-  { ticker: "MCHI", name: "iShares MSCI China ETF", region: "China", expenseRatio: 0.59, style: CAP },
-  { ticker: "FXI", name: "iShares China Large-Cap ETF", region: "China", expenseRatio: 0.74, style: CAP },
-  { ticker: "KWEB", name: "KraneShares CSI China Internet ETF", region: "China", expenseRatio: 0.69, style: RULES },
-  { ticker: "EZA", name: "iShares MSCI South Africa ETF", region: "Sudáfrica", expenseRatio: 0.59, style: CAP },
-  { ticker: "TUR", name: "iShares MSCI Turkey ETF", region: "Turquía", expenseRatio: 0.59, style: CAP },
-  { ticker: "EPOL", name: "iShares MSCI Poland ETF", region: "Polonia", expenseRatio: 0.59, style: CAP },
-  { ticker: "KSA", name: "iShares MSCI Saudi Arabia ETF", region: "Arabia Saudita", expenseRatio: 0.75, style: CAP },
-  { ticker: "UAE", name: "iShares MSCI UAE ETF", region: "Emiratos Árabes", expenseRatio: 0.59, style: CAP },
-  { ticker: "THD", name: "iShares MSCI Thailand ETF", region: "Tailandia", expenseRatio: 0.59, style: CAP },
-  { ticker: "EIDO", name: "iShares MSCI Indonesia ETF", region: "Indonesia", expenseRatio: 0.59, style: CAP },
-  { ticker: "EWM", name: "iShares MSCI Malaysia ETF", region: "Malasia", expenseRatio: 0.50, style: CAP },
-  { ticker: "EPHE", name: "iShares MSCI Philippines ETF", region: "Filipinas", expenseRatio: 0.59, style: CAP },
-  { ticker: "VNM", name: "VanEck Vietnam ETF", region: "Vietnam", expenseRatio: 0.66, style: CAP },
-];
+function indexStyleFor(category: FundCategory): IndexStyle {
+  return category === "cap-weighted" ? "Capitalización" : "Reglas propias";
+}
+
+export const EXPENSE_RATIOS_AS_OF: string = etfMetadata.asOf;
+
+/**
+ * Candidate pool, built from the dictionary. The region is only a label shown on
+ * the card: ranking never looks at it, so if the best ETFs all happen to be in
+ * one country, all of them are shown.
+ */
+export const EMERGING_MARKET_ETF_UNIVERSE: readonly UniverseEntry[] = (etfMetadata.funds as MetadataFund[]).map((fund) => ({
+  ticker: fund.ticker,
+  name: fund.name,
+  region: fund.region,
+  expenseRatio: fund.expenseRatio,
+  category: fund.category,
+  style: indexStyleFor(fund.category),
+}));
 
 const TOP_N = 20;
 const FETCH_CONCURRENCY = 8;
@@ -73,8 +43,8 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const CACHE_PATH_ENV = "EMERGING_MARKET_IDEAS_CACHE_PATH";
 const DEFAULT_CACHE_PATH = path.join(process.cwd(), ".cache", "emerging-market-ideas.json");
 const CACHE_VERSION = 3;
-const LIQUIDITY_WINDOW = 63;
-const LOW_LIQUIDITY_USD = 5_000_000;
+const LIQUIDITY_WINDOW = 30;
+const LOW_LIQUIDITY_USD = 10_000_000;
 const SOURCE = "Yahoo Finance · precios, volumen y dividendos · ratios de gastos revisados a mano";
 
 export type EmergingMarketIdea = {
@@ -256,7 +226,7 @@ export function computeTrailingDividendYield(
   return paid > 0 ? Number(((paid / lastClose) * 100).toFixed(2)) : null;
 }
 
-/** Mean traded value (price x shares) over the last 63 sessions; null with fewer than 20 sessions of volume. */
+/** Mean traded value (price x shares) over the last 30 sessions; null with fewer than 20 sessions of volume. */
 export function computeAvgDollarVolume(dollarVolumes: number[]): number | null {
   const window = dollarVolumes.slice(-LIQUIDITY_WINDOW);
   if (window.length < 20) return null;
@@ -285,7 +255,7 @@ function growthTrend(closes: number[]): EmergingMarketIdea["growthTrend"] {
  *   + trend adjustment (+10 rising, 0 mixed, -10 falling)
  *   - half of the maximum drawdown in the window, limited to 20 points
  *   - cost: 1 point per 0.10% of expense ratio above 0.20%, limited to 8 points
- *   - liquidity: 5 points when the average daily traded value is below US$5 million
+ *   - liquidity: 5 points when the average daily traded value is below US$10 million
  * A candidate without a full 200-session window gets no score and is left out.
  */
 export function scoreIdea(candidate: Pick<RankedInput, "return200Sessions" | "growthTrend" | "maxDrawdown" | "historySessions" | "expenseRatio" | "avgDollarVolume">): number | null {
