@@ -3,7 +3,7 @@ import { ArrowLeft, CheckCircle2, Flag, XCircle } from "lucide-react";
 
 // Results of the long backtest run in September 2026 (daily Yahoo data, dividends reinvested,
 // $200 per month, idle cash at 3% a year, JB signal computed with the radar's exact rules).
-// Keep these numbers in sync with any new run; see CLAUDE.md "Evidence".
+// Keep these numbers in sync with any new run; see the project guide, section "Evidence".
 const WINDOWS = [
   { strategy: "Comprar dentro del mes el primer día en zona", beats: 43, median: "−0,05%", worst: "−2,4%", best: "+0,4%" },
   { strategy: "Esperar la zona hasta 3 meses", beats: 48, median: "−0,03%", worst: "−5,9%", best: "+0,7%" },
