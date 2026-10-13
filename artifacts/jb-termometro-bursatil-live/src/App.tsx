@@ -790,7 +790,7 @@ function EmergingMarketIdeasSection() {
             <div className="min-w-0">
               <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[.16em] text-[#856b2b] dark:text-[#e4c875]"><Gem className="h-3 w-3" /> Cofres de investigación</p>
               <h2 className="mt-1 font-display text-xl font-bold tracking-[-.04em] sm:text-2xl">Ideas ETF de mercados emergentes</h2>
-              <p className="mt-1 max-w-2xl text-[11px] leading-relaxed text-muted-foreground">Las 10 mejores pistas de un barrido de ETF de todo el mundo emergente. Se ordenan juntas, sin importar el país, por retorno de 200 sesiones, tendencia, caída máxima, costo y liquidez.</p>
+              <p className="mx-auto mt-1 max-w-2xl text-center text-xs font-bold leading-relaxed text-foreground">Las 10 mejores pistas de un escaneo de ETF de todo el mundo emergente. Se ordenan juntas, sin importar el país, por retorno de 200 sesiones, tendencia, caída máxima, costo y liquidez.</p>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2 self-start">
