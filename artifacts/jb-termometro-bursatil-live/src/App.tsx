@@ -767,7 +767,7 @@ function formatIdeaValue(value: number | null | undefined, suffix = "", decimals
 function EmergingMarketIdeasSection() {
   const ideasQuery = useGetEmergingMarketIdeas();
   const payload = ideasQuery.data;
-  const ideas = (payload?.ideas ?? []).slice(0, 5);
+  const ideas = (payload?.ideas ?? []).slice(0, 10);
   const stale = Boolean(payload?.stale);
   const hasPartialData = Boolean(payload?.errors?.length);
 
@@ -783,12 +783,12 @@ function EmergingMarketIdeasSection() {
             <div className="min-w-0">
               <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[.16em] text-[#856b2b] dark:text-[#e4c875]"><Gem className="h-3 w-3" /> Cofres de investigación</p>
               <h2 className="mt-1 font-display text-xl font-bold tracking-[-.04em] sm:text-2xl">Ideas ETF de mercados emergentes</h2>
-              <p className="mt-1 max-w-2xl text-[11px] leading-relaxed text-muted-foreground">Hasta 5 pistas para investigar, ordenadas con una lectura de tendencia y retorno de 200 sesiones.</p>
+              <p className="mt-1 max-w-2xl text-[11px] leading-relaxed text-muted-foreground">Las 10 mejores pistas de un barrido de ETF de todo el mundo emergente. Se ordenan juntas, sin importar el país, por retorno de 200 sesiones, tendencia y caída máxima.</p>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2 self-start">
             {ideasQuery.isFetching && payload ? <span className="rounded-full bg-accent/10 px-2.5 py-1 text-[10px] font-bold text-accent" data-testid="status-emerging-ideas-refreshing">Actualizando…</span> : null}
-            <span className="rounded-full border border-card-border bg-card/80 px-2.5 py-1 text-[10px] font-bold text-muted-foreground">{payload?.candidateUniverse.length ?? "—"} candidatos</span>
+            <span className="rounded-full border border-card-border bg-card/80 px-2.5 py-1 text-[10px] font-bold text-muted-foreground">{payload?.candidatesEvaluated ?? "—"} evaluados</span>
           </div>
         </div>
         <div className="mt-4 flex flex-col gap-1.5 border-t border-[#d7c79d]/70 pt-3 text-[10px] leading-relaxed text-muted-foreground dark:border-[#6d5e38] sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4">
@@ -805,7 +805,7 @@ function EmergingMarketIdeasSection() {
       <div className="p-4 sm:p-6">
         {ideasQuery.isLoading && !payload ? (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3" data-testid="loading-emerging-ideas">
-            {[1, 2, 3, 4, 5].map((item) => <SkeletonBlock key={item} className="h-[248px]" />)}
+            {[1, 2, 3, 4, 5, 6].map((item) => <SkeletonBlock key={item} className="h-[248px]" />)}
           </div>
         ) : ideasQuery.isError && !payload ? (
           <div className="flex min-h-48 flex-col items-center justify-center rounded-2xl border border-destructive/20 bg-destructive/5 px-5 py-8 text-center" data-testid="error-emerging-ideas">
@@ -831,6 +831,7 @@ function EmergingMarketIdeasSection() {
                     <div className="min-w-0">
                       <a href={getYahooAdvancedChartUrl(idea.ticker)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-mono-app text-sm font-bold hover:text-primary" data-testid={`link-emerging-idea-${idea.ticker}`}><TickerText value={idea.ticker} /><ExternalLink className="h-3 w-3 text-muted-foreground" /></a>
                       <p className="mt-0.5 truncate text-[10px] text-muted-foreground" title={idea.name}>{idea.name}</p>
+                      <span className="mt-1 inline-block rounded-full border border-card-border px-2 py-0.5 text-[9px] font-bold text-muted-foreground" data-testid={`region-emerging-idea-${idea.ticker}`}>{idea.region}</span>
                     </div>
                   </div>
                   <span className="shrink-0 rounded-full bg-secondary px-2 py-1 text-[9px] font-bold uppercase tracking-[.08em] text-muted-foreground">{idea.rank ? `#${idea.rank}` : "Sin rango"}</span>
@@ -839,9 +840,9 @@ function EmergingMarketIdeasSection() {
                   {[
                     ["Tendencia", idea.growthTrend ?? null],
                     ["Retorno 200 sesiones", formatIdeaValue(idea.return200Sessions, "%")],
-                    ["Dividend yield", formatIdeaValue(idea.dividendYield, "%")],
-                    ["P/E", formatIdeaValue(idea.peRatio)],
-                    ["Margen beneficio", formatIdeaValue(idea.profitMargin, "%")],
+                    ["Caída máxima", formatIdeaValue(idea.maxDrawdown, "%")],
+                    ["Volatilidad anual", formatIdeaValue(idea.volatility, "%")],
+                    ["Dividendo 12 meses", typeof idea.dividendYield === "number" ? formatIdeaValue(idea.dividendYield, "%") : "Sin pagos"],
                     ["Sesiones válidas", formatIdeaValue(idea.historySessions, "", 0)],
                   ].map(([label, value]) => <div key={String(label)} className="rounded-xl bg-secondary/55 px-2.5 py-2" data-testid={`metric-emerging-idea-${idea.ticker}-${String(label).toLowerCase().replaceAll(" ", "-")}`}><p className="text-[9px] font-bold uppercase tracking-[.08em] text-muted-foreground">{label}</p><p className="mt-1 truncate font-mono-app text-[11px] font-bold text-foreground">{value ?? "No disponible"}</p></div>)}
                 </div>
@@ -853,7 +854,7 @@ function EmergingMarketIdeasSection() {
             ))}
           </div>
         )}
-        <div className="mt-4 rounded-xl border border-card-border bg-secondary/40 px-3 py-2.5 text-[10px] leading-relaxed text-muted-foreground" data-testid="disclaimer-emerging-ideas">Estas son <strong className="text-foreground">ideas para investigar</strong>, no recomendaciones ni asesoramiento financiero. El ranking no cambia las señales JB ni sustituye sus reglas de RSI/SMA. Los datos fundamentales dependen de Yahoo Finance y se muestran como «No disponible» cuando no están publicados.</div>
+        <div className="mt-4 rounded-xl border border-card-border bg-secondary/40 px-3 py-2.5 text-[10px] leading-relaxed text-muted-foreground" data-testid="disclaimer-emerging-ideas">Estas son <strong className="text-foreground">ideas para investigar</strong>, no recomendaciones ni asesoramiento financiero. El ranking no cambia las señales JB ni sustituye sus reglas de RSI/SMA. El puntaje parte de 50 y suma el retorno de 200 sesiones (hasta ±50), ±10 por tendencia y resta hasta 20 por la caída máxima. Es una lectura de impulso del pasado y no anticipa lo que hará el fondo. Solo entran fondos con 200 sesiones completas de datos de Yahoo Finance.</div>
       </div>
     </section>
   );

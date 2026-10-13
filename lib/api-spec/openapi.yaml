@@ -322,7 +322,7 @@ paths:
       tags: [market]
       summary: Returns ranked emerging-market ETF research ideas
       description: >
-        Public, cached research ideas from a fixed emerging-market ETF universe.
+        Public, cached research ideas from a wide pool of emerging-market ETFs ranked together regardless of country.
         This is not investment advice. Yahoo Finance is the source and unavailable
         values are returned as null.
       parameters:
@@ -791,7 +791,7 @@ components:
         candidatesEvaluated: { type: number, minimum: 0 }
         ideas:
           type: array
-          maxItems: 5
+          maxItems: 10
           items:
             $ref: "#/components/schemas/EmergingMarketIdea"
       required: [updatedAt, source, cached, stale, errors, candidateUniverse, candidatesEvaluated, ideas]
@@ -801,19 +801,22 @@ components:
       properties:
         ticker: { type: string }
         name: { type: string }
+        region: { type: string, description: Country or region label of the fund; informational only, never used for ranking. }
         historySessions: { type: number, minimum: 0 }
         growthTrend:
           type: ["string", "null"]
           enum: ["Al alza", "Mixta", "A la baja", null]
         return200Sessions: { type: ["number", "null"], description: Total price return across the last 200 valid trading sessions, in percent. }
-        dividendYield: { type: ["number", "null"], description: Yahoo Finance dividend yield, in percent. }
-        peRatio: { type: ["number", "null"], description: Yahoo Finance trailing P/E. }
-        profitMargin: { type: ["number", "null"], description: Yahoo Finance net profit margin, in percent. }
-        score: { type: ["number", "null"], description: Transparent ranking score derived only from available 200-session return and trend. }
-        rank: { type: ["number", "null"], minimum: 1, maximum: 5 }
+        volatility: { type: ["number", "null"], description: Annualised volatility of daily returns over the last 200 sessions, in percent. }
+        maxDrawdown: { type: ["number", "null"], description: Worst peak-to-trough fall inside the last 200 sessions, in percent. }
+        dividendYield: { type: ["number", "null"], description: Dividends paid in the last 12 months divided by the last close, in percent; null when none were paid. }
+        peRatio: { type: ["number", "null"], description: Not populated any more; always null. }
+        profitMargin: { type: ["number", "null"], description: Not populated any more; always null. }
+        score: { type: ["number", "null"], description: Transparent ranking score built from 200-session return, trend and maximum drawdown. }
+        rank: { type: ["number", "null"], minimum: 1, maximum: 10 }
         source: { type: string }
         updatedAt: { type: string }
-      required: [ticker, name, historySessions, growthTrend, return200Sessions, dividendYield, peRatio, profitMargin, score, rank, source, updatedAt]
+      required: [ticker, name, region, historySessions, growthTrend, return200Sessions, volatility, maxDrawdown, dividendYield, peRatio, profitMargin, score, rank, source, updatedAt]
     MarketAsset:
       type: object
       properties:

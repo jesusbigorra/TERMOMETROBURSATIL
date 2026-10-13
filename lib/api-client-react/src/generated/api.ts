@@ -1353,7 +1353,7 @@ export const getGetEmergingMarketIdeasUrl = (params?: GetEmergingMarketIdeasPara
 }
 
 /**
- * Public, cached research ideas from a fixed emerging-market ETF universe. This is not investment advice. Yahoo Finance is the source and unavailable values are returned as null.
+ * Public, cached research ideas from a wide pool of emerging-market ETFs ranked together regardless of country. This is not investment advice. Yahoo Finance is the source and unavailable values are returned as null.
  * @summary Returns ranked emerging-market ETF research ideas
  */
 export const getEmergingMarketIdeas = async (params?: GetEmergingMarketIdeasParams, options?: Parameters<typeof customFetch>[1]): Promise<EmergingMarketIdeas> => {

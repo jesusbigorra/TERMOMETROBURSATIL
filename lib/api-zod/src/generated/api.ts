@@ -531,7 +531,7 @@ export const GetMarketRadarResponse = zod.object({
 
 
 /**
- * Public, cached research ideas from a fixed emerging-market ETF universe. This is not investment advice. Yahoo Finance is the source and unavailable values are returned as null.
+ * Public, cached research ideas from a wide pool of emerging-market ETFs ranked together regardless of country. This is not investment advice. Yahoo Finance is the source and unavailable values are returned as null.
  * @summary Returns ranked emerging-market ETF research ideas
  */
 export const getEmergingMarketIdeasQueryRefreshDefault = false;
@@ -544,9 +544,9 @@ export const getEmergingMarketIdeasResponseCandidatesEvaluatedMin = 0;
 
 export const getEmergingMarketIdeasResponseIdeasItemHistorySessionsMin = 0;
 
-export const getEmergingMarketIdeasResponseIdeasItemRankMax = 5;
+export const getEmergingMarketIdeasResponseIdeasItemRankMax = 10;
 
-export const getEmergingMarketIdeasResponseIdeasMax = 5;
+export const getEmergingMarketIdeasResponseIdeasMax = 10;
 
 
 export const GetEmergingMarketIdeasResponse = zod.object({
@@ -560,13 +560,16 @@ export const GetEmergingMarketIdeasResponse = zod.object({
   "ideas": zod.array(zod.object({
   "ticker": zod.string(),
   "name": zod.string(),
+  "region": zod.string().describe('Country or region label of the fund; informational only, never used for ranking.'),
   "historySessions": zod.number().min(getEmergingMarketIdeasResponseIdeasItemHistorySessionsMin),
   "growthTrend": zod.union([zod.literal('Al alza'),zod.literal('Mixta'),zod.literal('A la baja'),zod.literal(null)]).nullable(),
   "return200Sessions": zod.number().nullable().describe('Total price return across the last 200 valid trading sessions'),
-  "dividendYield": zod.number().nullable().describe('Yahoo Finance dividend yield'),
-  "peRatio": zod.number().nullable().describe('Yahoo Finance trailing P\/E.'),
-  "profitMargin": zod.number().nullable().describe('Yahoo Finance net profit margin'),
-  "score": zod.number().nullable().describe('Transparent ranking score derived only from available 200-session return and trend.'),
+  "volatility": zod.number().nullable().describe('Annualised volatility of daily returns over the last 200 sessions, in percent.'),
+  "maxDrawdown": zod.number().nullable().describe('Worst peak-to-trough fall inside the last 200 sessions, in percent.'),
+  "dividendYield": zod.number().nullable().describe('Dividends paid in the last 12 months divided by the last close, in percent; null when none were paid.'),
+  "peRatio": zod.number().nullable().describe('Not populated any more; always null.'),
+  "profitMargin": zod.number().nullable().describe('Not populated any more; always null.'),
+  "score": zod.number().nullable().describe('Transparent ranking score built from 200-session return, trend and maximum drawdown.'),
   "rank": zod.number().min(1).max(getEmergingMarketIdeasResponseIdeasItemRankMax).nullable(),
   "source": zod.string(),
   "updatedAt": zod.string()

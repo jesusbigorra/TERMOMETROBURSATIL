@@ -4,21 +4,30 @@ import { test } from "node:test";
 import os from "node:os";
 import path from "node:path";
 import {
+  EMERGING_MARKET_ETF_UNIVERSE,
   compute200SessionReturn,
+  computeMaxDrawdown,
+  computeTrailingDividendYield,
+  computeVolatility,
   getEmergingMarketIdeas,
   rankEmergingIdeas,
   resetEmergingMarketIdeasCache,
+  scoreIdea,
 } from "./emerging-market-ideas.ts";
 
-const baseCandidate = (ticker: string, score: number) => ({
+const candidate = (ticker: string, returnValue: number, overrides: Record<string, unknown> = {}) => ({
   ticker,
   name: ticker,
+  region: "Brasil",
   historySessions: 205,
-  growthTrend: score > 0 ? "Al alza" as const : "Mixta" as const,
-  return200Sessions: score,
+  growthTrend: "Mixta" as "Al alza" | "Mixta" | "A la baja" | null,
+  return200Sessions: returnValue as number | null,
+  volatility: 20 as number | null,
+  maxDrawdown: 0 as number | null,
   dividendYield: null,
   peRatio: null,
   profitMargin: null,
+  ...overrides,
 });
 
 test("calcula el retorno de exactamente las últimas 200 sesiones y deja null si faltan", () => {
@@ -27,19 +36,76 @@ test("calcula el retorno de exactamente las últimas 200 sesiones y deja null si
   assert.equal(compute200SessionReturn(closes.slice(0, 199)), null);
 });
 
-test("ordena las ideas por score, permite repetir ganadores y limita a cinco", () => {
+test("mide la caída máxima dentro de la ventana de 200 sesiones", () => {
+  const closes = [...Array.from({ length: 100 }, () => 100), ...Array.from({ length: 50 }, () => 80), ...Array.from({ length: 50 }, () => 90)];
+  assert.equal(computeMaxDrawdown(closes), 20);
+  assert.equal(computeMaxDrawdown(closes.slice(0, 199)), null);
+  assert.equal(computeMaxDrawdown(Array.from({ length: 200 }, (_, index) => 100 + index)), 0);
+});
+
+test("la volatilidad es cero con precio plano y positiva cuando el precio oscila", () => {
+  assert.equal(computeVolatility(Array.from({ length: 200 }, () => 50)), 0);
+  const zigzag = Array.from({ length: 200 }, (_, index) => (index % 2 === 0 ? 100 : 102));
+  assert.ok((computeVolatility(zigzag) ?? 0) > 10);
+  assert.equal(computeVolatility(zigzag.slice(0, 150)), null);
+});
+
+test("el rendimiento por dividendo suma solo los últimos 12 meses", () => {
+  const last = 1_700_000_000;
+  const day = 86_400;
+  const dividends = [
+    { amount: 1, date: last - 30 * day },
+    { amount: 1, date: last - 300 * day },
+    { amount: 5, date: last - 400 * day },
+  ];
+  assert.equal(computeTrailingDividendYield(dividends, 100, last), 2);
+  assert.equal(computeTrailingDividendYield([], 100, last), null);
+  assert.equal(computeTrailingDividendYield(dividends, undefined, last), null);
+});
+
+test("el puntaje suma retorno y tendencia y resta la caída máxima", () => {
+  assert.equal(scoreIdea(candidate("AAA", 20)), 70);
+  assert.equal(scoreIdea(candidate("AAA", 20, { growthTrend: "Al alza" })), 80);
+  assert.equal(scoreIdea(candidate("AAA", 20, { growthTrend: "A la baja" })), 60);
+  assert.equal(scoreIdea(candidate("AAA", 20, { maxDrawdown: 10 })), 65);
+  assert.equal(scoreIdea(candidate("AAA", 20, { maxDrawdown: 90 })), 50);
+  assert.equal(scoreIdea(candidate("AAA", 500)), 100);
+  assert.equal(scoreIdea(candidate("AAA", 20, { historySessions: 199 })), null);
+  assert.equal(scoreIdea(candidate("AAA", 0, { return200Sessions: null })), null);
+});
+
+test("ordena todo junto sin mirar la región: cinco fondos del mismo país entran los cinco", () => {
   const ideas = rankEmergingIdeas([
-    baseCandidate("AAA", 1),
-    baseCandidate("BBB", 50),
-    baseCandidate("CCC", 10),
-    baseCandidate("DDD", 20),
-    baseCandidate("EEE", 30),
-    baseCandidate("FFF", 40),
-    { ...baseCandidate("GGG", 90), historySessions: 199, return200Sessions: null },
+    candidate("BR1", 30), candidate("BR2", 25), candidate("BR3", 20), candidate("BR4", 15), candidate("BR5", 10),
+    candidate("IN1", 5, { region: "India" }),
   ]);
-  assert.equal(ideas.length, 5);
-  assert.deepEqual(ideas.map((idea) => idea.ticker), ["BBB", "FFF", "EEE", "DDD", "CCC"]);
-  assert.equal(ideas.every((idea) => idea.rank !== null), true);
+  assert.deepEqual(ideas.map((idea) => idea.ticker), ["BR1", "BR2", "BR3", "BR4", "BR5", "IN1"]);
+  assert.equal(ideas.every((idea) => idea.region === "Brasil" || idea.ticker === "IN1"), true);
+  assert.deepEqual(ideas.map((idea) => idea.rank), [1, 2, 3, 4, 5, 6]);
+});
+
+test("limita a diez, excluye los fondos sin 200 sesiones y desempata por menor caída y luego por ticker", () => {
+  const many = Array.from({ length: 12 }, (_, index) => candidate(`T${String(index).padStart(2, "0")}`, 40 - index));
+  const ideas = rankEmergingIdeas([
+    ...many,
+    candidate("NEW", 90, { historySessions: 199, return200Sessions: null }),
+  ]);
+  assert.equal(ideas.length, 10);
+  assert.equal(ideas.some((idea) => idea.ticker === "NEW"), false);
+
+  const tied = rankEmergingIdeas([
+    candidate("ZZZ", 20, { maxDrawdown: 4 }),
+    candidate("AAA", 20, { maxDrawdown: 10 }),
+    candidate("MMM", 20, { maxDrawdown: 4 }),
+  ]);
+  // 20 + 50 - 2 = 68 for ZZZ and MMM, 20 + 50 - 5 = 65 for AAA.
+  assert.deepEqual(tied.map((idea) => idea.ticker), ["MMM", "ZZZ", "AAA"]);
+});
+
+test("el universo no repite tickers y cubre varias regiones", () => {
+  const tickers = EMERGING_MARKET_ETF_UNIVERSE.map((entry) => entry.ticker);
+  assert.equal(new Set(tickers).size, tickers.length);
+  assert.ok(new Set(EMERGING_MARKET_ETF_UNIVERSE.map((entry) => entry.region)).size >= 15);
 });
 
 test("usa la caché de 24 horas para no repetir la evaluación pública", async () => {
@@ -50,29 +116,29 @@ test("usa la caché de 24 horas para no repetir la evaluación pública", async 
   process.env.EMERGING_MARKET_IDEAS_CACHE_PATH = path.join(directory, "ideas.json");
   globalThis.fetch = async (url: string | URL) => {
     calls += 1;
-    if (String(url).includes("/chart/")) {
-      const count = 205;
-      return new Response(JSON.stringify({
-        chart: {
-          result: [{
-            meta: { longName: "ETF de prueba" },
-            timestamp: Array.from({ length: count }, (_, index) => 1_700_000_000 + index * 86_400),
-            indicators: { quote: [{ close: Array.from({ length: count }, (_, index) => 100 + index) }] },
-          }],
-        },
-      }), { status: 200, headers: { "Content-Type": "application/json" } });
-    }
-    return new Response(JSON.stringify({ quoteSummary: { result: [{}] } }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    const count = 205;
+    const start = 1_700_000_000;
+    const lastTimestamp = start + (count - 1) * 86_400;
+    return new Response(JSON.stringify({
+      chart: {
+        result: [{
+          meta: { longName: "ETF de prueba" },
+          timestamp: Array.from({ length: count }, (_, index) => start + index * 86_400),
+          events: { dividends: { [String(lastTimestamp - 86_400)]: { amount: 2, date: lastTimestamp - 86_400 } } },
+          indicators: { quote: [{ close: Array.from({ length: count }, (_, index) => 100 + index) }] },
+        }],
+      },
+    }), { status: 200, headers: { "Content-Type": "application/json" } });
   };
   try {
     resetEmergingMarketIdeasCache();
     const first = await getEmergingMarketIdeas(true);
     const callsAfterFirst = calls;
     const second = await getEmergingMarketIdeas();
-    assert.equal(first.ideas.length, 5);
+    assert.equal(first.ideas.length, 10);
+    assert.equal(first.candidatesEvaluated, EMERGING_MARKET_ETF_UNIVERSE.length);
+    assert.equal(first.ideas[0].dividendYield, Number(((2 / 304) * 100).toFixed(2)));
+    assert.equal(first.ideas[0].maxDrawdown, 0);
     assert.equal(second.cached, true);
     assert.equal(calls, callsAfterFirst);
   } finally {

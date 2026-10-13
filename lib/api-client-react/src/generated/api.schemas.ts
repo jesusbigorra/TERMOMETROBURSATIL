@@ -446,6 +446,8 @@ export const EmergingMarketIdeaGrowthTrend = {
 export interface EmergingMarketIdea {
   ticker: string;
   name: string;
+  /** Country or region label of the fund; informational only, never used for ranking. */
+  region: string;
   /** @minimum 0 */
   historySessions: number;
   /** @nullable */
@@ -456,28 +458,38 @@ export interface EmergingMarketIdea {
      */
   return200Sessions: number | null;
   /**
-     * Yahoo Finance dividend yield
+     * Annualised volatility of daily returns over the last 200 sessions, in percent.
+     * @nullable
+     */
+  volatility: number | null;
+  /**
+     * Worst peak-to-trough fall inside the last 200 sessions, in percent.
+     * @nullable
+     */
+  maxDrawdown: number | null;
+  /**
+     * Dividends paid in the last 12 months divided by the last close, in percent; null when none were paid.
      * @nullable
      */
   dividendYield: number | null;
   /**
-     * Yahoo Finance trailing P/E.
+     * Not populated any more; always null.
      * @nullable
      */
   peRatio: number | null;
   /**
-     * Yahoo Finance net profit margin
+     * Not populated any more; always null.
      * @nullable
      */
   profitMargin: number | null;
   /**
-     * Transparent ranking score derived only from available 200-session return and trend.
+     * Transparent ranking score built from 200-session return, trend and maximum drawdown.
      * @nullable
      */
   score: number | null;
   /**
      * @minimum 1
-     * @maximum 5
+     * @maximum 10
      * @nullable
      */
   rank: number | null;
@@ -497,7 +509,7 @@ export interface EmergingMarketIdeas {
   candidateUniverse: string[];
   /** @minimum 0 */
   candidatesEvaluated: number;
-  /** @maxItems 5 */
+  /** @maxItems 10 */
   ideas: EmergingMarketIdea[];
 }
 

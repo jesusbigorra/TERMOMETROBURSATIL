@@ -19,6 +19,6 @@ export interface EmergingMarketIdeas {
   candidateUniverse: string[];
   /** @minimum 0 */
   candidatesEvaluated: number;
-  /** @maxItems 5 */
+  /** @maxItems 10 */
   ideas: EmergingMarketIdea[];
 }
