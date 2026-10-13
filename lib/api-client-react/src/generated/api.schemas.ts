@@ -446,7 +446,7 @@ export const EmergingMarketIdeaGrowthTrend = {
 export interface EmergingMarketIdea {
   ticker: string;
   name: string;
-  /** Country or region label of the fund; informational only, never used for ranking. */
+  /** Country or region label of the fund; informational only and never used for ranking. */
   region: string;
   /** @minimum 0 */
   historySessions: number;
@@ -458,20 +458,32 @@ export interface EmergingMarketIdea {
      */
   return200Sessions: number | null;
   /**
-     * Annualised volatility of daily returns over the last 200 sessions, in percent.
+     * Annualised volatility of daily returns over the last 200 sessions as a percentage.
      * @nullable
      */
   volatility: number | null;
   /**
-     * Worst peak-to-trough fall inside the last 200 sessions, in percent.
+     * Worst peak-to-trough fall inside the last 200 sessions as a percentage.
      * @nullable
      */
   maxDrawdown: number | null;
   /**
-     * Dividends paid in the last 12 months divided by the last close, in percent; null when none were paid.
+     * Dividends paid in the last 12 months divided by the last close as a percentage; null when none were paid.
      * @nullable
      */
   dividendYield: number | null;
+  /**
+     * Annual expense ratio of the fund as a percentage from a hand-kept table.
+     * @nullable
+     */
+  expenseRatio: number | null;
+  /** Capitalización when the fund weights by market cap; otherwise Reglas propias (fundamentals or dividends or factors or themes or exclusions). */
+  indexStyle: string;
+  /**
+     * Average daily traded value over the last 63 sessions in US dollars.
+     * @nullable
+     */
+  avgDollarVolume: number | null;
   /**
      * Not populated any more; always null.
      * @nullable
@@ -483,13 +495,13 @@ export interface EmergingMarketIdea {
      */
   profitMargin: number | null;
   /**
-     * Transparent ranking score built from 200-session return, trend and maximum drawdown.
+     * Transparent ranking score built from return and trend and drawdown and cost and liquidity.
      * @nullable
      */
   score: number | null;
   /**
      * @minimum 1
-     * @maximum 10
+     * @maximum 20
      * @nullable
      */
   rank: number | null;
@@ -509,7 +521,9 @@ export interface EmergingMarketIdeas {
   candidateUniverse: string[];
   /** @minimum 0 */
   candidatesEvaluated: number;
-  /** @maxItems 10 */
+  /** Date (YYYY-MM-DD) when the hand-kept expense ratios were last reviewed. */
+  expenseRatiosAsOf: string;
+  /** @maxItems 20 */
   ideas: EmergingMarketIdea[];
 }
 

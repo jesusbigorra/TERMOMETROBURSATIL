@@ -544,9 +544,9 @@ export const getEmergingMarketIdeasResponseCandidatesEvaluatedMin = 0;
 
 export const getEmergingMarketIdeasResponseIdeasItemHistorySessionsMin = 0;
 
-export const getEmergingMarketIdeasResponseIdeasItemRankMax = 10;
+export const getEmergingMarketIdeasResponseIdeasItemRankMax = 20;
 
-export const getEmergingMarketIdeasResponseIdeasMax = 10;
+export const getEmergingMarketIdeasResponseIdeasMax = 20;
 
 
 export const GetEmergingMarketIdeasResponse = zod.object({
@@ -557,19 +557,23 @@ export const GetEmergingMarketIdeasResponse = zod.object({
   "errors": zod.array(zod.string()),
   "candidateUniverse": zod.array(zod.string()),
   "candidatesEvaluated": zod.number().min(getEmergingMarketIdeasResponseCandidatesEvaluatedMin),
+  "expenseRatiosAsOf": zod.string().describe('Date (YYYY-MM-DD) when the hand-kept expense ratios were last reviewed.'),
   "ideas": zod.array(zod.object({
   "ticker": zod.string(),
   "name": zod.string(),
-  "region": zod.string().describe('Country or region label of the fund; informational only, never used for ranking.'),
+  "region": zod.string().describe('Country or region label of the fund; informational only and never used for ranking.'),
   "historySessions": zod.number().min(getEmergingMarketIdeasResponseIdeasItemHistorySessionsMin),
   "growthTrend": zod.union([zod.literal('Al alza'),zod.literal('Mixta'),zod.literal('A la baja'),zod.literal(null)]).nullable(),
   "return200Sessions": zod.number().nullable().describe('Total price return across the last 200 valid trading sessions'),
-  "volatility": zod.number().nullable().describe('Annualised volatility of daily returns over the last 200 sessions, in percent.'),
-  "maxDrawdown": zod.number().nullable().describe('Worst peak-to-trough fall inside the last 200 sessions, in percent.'),
-  "dividendYield": zod.number().nullable().describe('Dividends paid in the last 12 months divided by the last close, in percent; null when none were paid.'),
+  "volatility": zod.number().nullable().describe('Annualised volatility of daily returns over the last 200 sessions as a percentage.'),
+  "maxDrawdown": zod.number().nullable().describe('Worst peak-to-trough fall inside the last 200 sessions as a percentage.'),
+  "dividendYield": zod.number().nullable().describe('Dividends paid in the last 12 months divided by the last close as a percentage; null when none were paid.'),
+  "expenseRatio": zod.number().nullable().describe('Annual expense ratio of the fund as a percentage from a hand-kept table.'),
+  "indexStyle": zod.string().describe('Capitalización when the fund weights by market cap; otherwise Reglas propias (fundamentals or dividends or factors or themes or exclusions).'),
+  "avgDollarVolume": zod.number().nullable().describe('Average daily traded value over the last 63 sessions in US dollars.'),
   "peRatio": zod.number().nullable().describe('Not populated any more; always null.'),
   "profitMargin": zod.number().nullable().describe('Not populated any more; always null.'),
-  "score": zod.number().nullable().describe('Transparent ranking score built from 200-session return, trend and maximum drawdown.'),
+  "score": zod.number().nullable().describe('Transparent ranking score built from return and trend and drawdown and cost and liquidity.'),
   "rank": zod.number().min(1).max(getEmergingMarketIdeasResponseIdeasItemRankMax).nullable(),
   "source": zod.string(),
   "updatedAt": zod.string()

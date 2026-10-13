@@ -789,34 +789,38 @@ components:
           type: array
           items: { type: string }
         candidatesEvaluated: { type: number, minimum: 0 }
+        expenseRatiosAsOf: { type: string, description: Date (YYYY-MM-DD) when the hand-kept expense ratios were last reviewed. }
         ideas:
           type: array
-          maxItems: 10
+          maxItems: 20
           items:
             $ref: "#/components/schemas/EmergingMarketIdea"
-      required: [updatedAt, source, cached, stale, errors, candidateUniverse, candidatesEvaluated, ideas]
+      required: [updatedAt, source, cached, stale, errors, candidateUniverse, candidatesEvaluated, expenseRatiosAsOf, ideas]
     EmergingMarketIdea:
       type: object
       description: One ETF to investigate; null means Yahoo Finance did not provide enough data.
       properties:
         ticker: { type: string }
         name: { type: string }
-        region: { type: string, description: Country or region label of the fund; informational only, never used for ranking. }
+        region: { type: string, description: Country or region label of the fund; informational only and never used for ranking. }
         historySessions: { type: number, minimum: 0 }
         growthTrend:
           type: ["string", "null"]
           enum: ["Al alza", "Mixta", "A la baja", null]
         return200Sessions: { type: ["number", "null"], description: Total price return across the last 200 valid trading sessions, in percent. }
-        volatility: { type: ["number", "null"], description: Annualised volatility of daily returns over the last 200 sessions, in percent. }
-        maxDrawdown: { type: ["number", "null"], description: Worst peak-to-trough fall inside the last 200 sessions, in percent. }
-        dividendYield: { type: ["number", "null"], description: Dividends paid in the last 12 months divided by the last close, in percent; null when none were paid. }
+        volatility: { type: ["number", "null"], description: Annualised volatility of daily returns over the last 200 sessions as a percentage. }
+        maxDrawdown: { type: ["number", "null"], description: Worst peak-to-trough fall inside the last 200 sessions as a percentage. }
+        dividendYield: { type: ["number", "null"], description: Dividends paid in the last 12 months divided by the last close as a percentage; null when none were paid. }
+        expenseRatio: { type: ["number", "null"], description: Annual expense ratio of the fund as a percentage from a hand-kept table. }
+        indexStyle: { type: string, description: Capitalización when the fund weights by market cap; otherwise Reglas propias (fundamentals or dividends or factors or themes or exclusions). }
+        avgDollarVolume: { type: ["number", "null"], description: Average daily traded value over the last 63 sessions in US dollars. }
         peRatio: { type: ["number", "null"], description: Not populated any more; always null. }
         profitMargin: { type: ["number", "null"], description: Not populated any more; always null. }
-        score: { type: ["number", "null"], description: Transparent ranking score built from 200-session return, trend and maximum drawdown. }
-        rank: { type: ["number", "null"], minimum: 1, maximum: 10 }
+        score: { type: ["number", "null"], description: Transparent ranking score built from return and trend and drawdown and cost and liquidity. }
+        rank: { type: ["number", "null"], minimum: 1, maximum: 20 }
         source: { type: string }
         updatedAt: { type: string }
-      required: [ticker, name, region, historySessions, growthTrend, return200Sessions, volatility, maxDrawdown, dividendYield, peRatio, profitMargin, score, rank, source, updatedAt]
+      required: [ticker, name, region, historySessions, growthTrend, return200Sessions, volatility, maxDrawdown, dividendYield, expenseRatio, indexStyle, avgDollarVolume, peRatio, profitMargin, score, rank, source, updatedAt]
     MarketAsset:
       type: object
       properties:

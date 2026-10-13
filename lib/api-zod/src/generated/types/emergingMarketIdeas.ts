@@ -19,6 +19,8 @@ export interface EmergingMarketIdeas {
   candidateUniverse: string[];
   /** @minimum 0 */
   candidatesEvaluated: number;
-  /** @maxItems 10 */
+  /** Date (YYYY-MM-DD) when the hand-kept expense ratios were last reviewed. */
+  expenseRatiosAsOf: string;
+  /** @maxItems 20 */
   ideas: EmergingMarketIdea[];
 }

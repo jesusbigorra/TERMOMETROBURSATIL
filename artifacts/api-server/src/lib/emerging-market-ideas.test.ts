@@ -5,7 +5,9 @@ import os from "node:os";
 import path from "node:path";
 import {
   EMERGING_MARKET_ETF_UNIVERSE,
+  EXPENSE_RATIOS_AS_OF,
   compute200SessionReturn,
+  computeAvgDollarVolume,
   computeMaxDrawdown,
   computeTrailingDividendYield,
   computeVolatility,
@@ -25,6 +27,9 @@ const candidate = (ticker: string, returnValue: number, overrides: Record<string
   volatility: 20 as number | null,
   maxDrawdown: 0 as number | null,
   dividendYield: null,
+  expenseRatio: null as number | null,
+  indexStyle: "Capitalización",
+  avgDollarVolume: null as number | null,
   peRatio: null,
   profitMargin: null,
   ...overrides,
@@ -63,6 +68,21 @@ test("el rendimiento por dividendo suma solo los últimos 12 meses", () => {
   assert.equal(computeTrailingDividendYield(dividends, undefined, last), null);
 });
 
+test("el volumen diario promedio usa las últimas 63 sesiones y exige al menos 20", () => {
+  assert.equal(computeAvgDollarVolume(Array.from({ length: 19 }, () => 1_000_000)), null);
+  const values = [...Array.from({ length: 100 }, () => 9_000_000), ...Array.from({ length: 63 }, () => 2_000_000)];
+  assert.equal(computeAvgDollarVolume(values), 2_000_000);
+});
+
+test("el costo y la poca liquidez restan puntos", () => {
+  assert.equal(scoreIdea(candidate("AAA", 20, { expenseRatio: 0.2 })), 70);
+  assert.equal(scoreIdea(candidate("AAA", 20, { expenseRatio: 0.09 })), 70);
+  assert.equal(scoreIdea(candidate("AAA", 20, { expenseRatio: 0.72 })), 64.8);
+  assert.equal(scoreIdea(candidate("AAA", 20, { expenseRatio: 5 })), 62);
+  assert.equal(scoreIdea(candidate("AAA", 20, { avgDollarVolume: 4_999_999 })), 65);
+  assert.equal(scoreIdea(candidate("AAA", 20, { avgDollarVolume: 5_000_000 })), 70);
+});
+
 test("el puntaje suma retorno y tendencia y resta la caída máxima", () => {
   assert.equal(scoreIdea(candidate("AAA", 20)), 70);
   assert.equal(scoreIdea(candidate("AAA", 20, { growthTrend: "Al alza" })), 80);
@@ -84,13 +104,13 @@ test("ordena todo junto sin mirar la región: cinco fondos del mismo país entra
   assert.deepEqual(ideas.map((idea) => idea.rank), [1, 2, 3, 4, 5, 6]);
 });
 
-test("limita a diez, excluye los fondos sin 200 sesiones y desempata por menor caída y luego por ticker", () => {
-  const many = Array.from({ length: 12 }, (_, index) => candidate(`T${String(index).padStart(2, "0")}`, 40 - index));
+test("limita a veinte, excluye los fondos sin 200 sesiones y desempata por menor caída y luego por ticker", () => {
+  const many = Array.from({ length: 25 }, (_, index) => candidate(`T${String(index).padStart(2, "0")}`, 40 - index));
   const ideas = rankEmergingIdeas([
     ...many,
     candidate("NEW", 90, { historySessions: 199, return200Sessions: null }),
   ]);
-  assert.equal(ideas.length, 10);
+  assert.equal(ideas.length, 20);
   assert.equal(ideas.some((idea) => idea.ticker === "NEW"), false);
 
   const tied = rankEmergingIdeas([
@@ -102,9 +122,16 @@ test("limita a diez, excluye los fondos sin 200 sesiones y desempata por menor c
   assert.deepEqual(tied.map((idea) => idea.ticker), ["MMM", "ZZZ", "AAA"]);
 });
 
-test("el universo no repite tickers y cubre varias regiones", () => {
+test("el universo no repite tickers, trae ratio de gastos y estilo válidos y cubre varias regiones", () => {
   const tickers = EMERGING_MARKET_ETF_UNIVERSE.map((entry) => entry.ticker);
   assert.equal(new Set(tickers).size, tickers.length);
+  assert.equal(EMERGING_MARKET_ETF_UNIVERSE.every((entry) => typeof entry.expenseRatio === "number" && entry.expenseRatio > 0 && entry.expenseRatio < 2), true);
+  assert.equal(EMERGING_MARKET_ETF_UNIVERSE.every((entry) => entry.style === "Capitalización" || entry.style === "Reglas propias"), true);
+  const byTicker = new Map(EMERGING_MARKET_ETF_UNIVERSE.map((entry) => [entry.ticker, entry]));
+  assert.equal(byTicker.get("EEM")?.expenseRatio, 0.72);
+  assert.equal(byTicker.get("FNDE")?.style, "Reglas propias");
+  assert.equal(byTicker.get("EMXC")?.style, "Capitalización");
+  assert.match(EXPENSE_RATIOS_AS_OF, /^\d{4}-\d{2}-\d{2}$/);
   assert.ok(new Set(EMERGING_MARKET_ETF_UNIVERSE.map((entry) => entry.region)).size >= 15);
 });
 
@@ -125,7 +152,7 @@ test("usa la caché de 24 horas para no repetir la evaluación pública", async 
           meta: { longName: "ETF de prueba" },
           timestamp: Array.from({ length: count }, (_, index) => start + index * 86_400),
           events: { dividends: { [String(lastTimestamp - 86_400)]: { amount: 2, date: lastTimestamp - 86_400 } } },
-          indicators: { quote: [{ close: Array.from({ length: count }, (_, index) => 100 + index) }] },
+          indicators: { quote: [{ close: Array.from({ length: count }, (_, index) => 100 + index), volume: Array.from({ length: count }, () => 100_000) }] },
         }],
       },
     }), { status: 200, headers: { "Content-Type": "application/json" } });
@@ -135,10 +162,13 @@ test("usa la caché de 24 horas para no repetir la evaluación pública", async 
     const first = await getEmergingMarketIdeas(true);
     const callsAfterFirst = calls;
     const second = await getEmergingMarketIdeas();
-    assert.equal(first.ideas.length, 10);
+    assert.equal(first.ideas.length, 20);
     assert.equal(first.candidatesEvaluated, EMERGING_MARKET_ETF_UNIVERSE.length);
+    assert.equal(first.expenseRatiosAsOf, EXPENSE_RATIOS_AS_OF);
     assert.equal(first.ideas[0].dividendYield, Number(((2 / 304) * 100).toFixed(2)));
     assert.equal(first.ideas[0].maxDrawdown, 0);
+    assert.equal(first.ideas.every((idea) => idea.avgDollarVolume !== null && idea.avgDollarVolume > 5_000_000), true);
+    assert.equal(first.ideas.every((idea) => typeof idea.indexStyle === "string"), true);
     assert.equal(second.cached, true);
     assert.equal(calls, callsAfterFirst);
   } finally {

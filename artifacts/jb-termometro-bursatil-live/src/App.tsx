@@ -764,10 +764,17 @@ function formatIdeaValue(value: number | null | undefined, suffix = "", decimals
   return `${formatNumber(value, decimals)}${suffix}`;
 }
 
+function formatDollarVolume(value: number | null | undefined) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "No disponible";
+  return value >= 1_000_000_000 ? `US$ ${formatNumber(value / 1_000_000_000, 1)} MM/día` : `US$ ${formatNumber(value / 1_000_000, 1)} M/día`;
+}
+
 function EmergingMarketIdeasSection() {
   const ideasQuery = useGetEmergingMarketIdeas();
   const payload = ideasQuery.data;
-  const ideas = (payload?.ideas ?? []).slice(0, 10);
+  const [capOnly, setCapOnly] = useState(false);
+  const allIdeas = payload?.ideas ?? [];
+  const ideas = allIdeas.filter((idea) => !capOnly || idea.indexStyle === "Capitalización").slice(0, 10);
   const stale = Boolean(payload?.stale);
   const hasPartialData = Boolean(payload?.errors?.length);
 
@@ -783,7 +790,7 @@ function EmergingMarketIdeasSection() {
             <div className="min-w-0">
               <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[.16em] text-[#856b2b] dark:text-[#e4c875]"><Gem className="h-3 w-3" /> Cofres de investigación</p>
               <h2 className="mt-1 font-display text-xl font-bold tracking-[-.04em] sm:text-2xl">Ideas ETF de mercados emergentes</h2>
-              <p className="mt-1 max-w-2xl text-[11px] leading-relaxed text-muted-foreground">Las 10 mejores pistas de un barrido de ETF de todo el mundo emergente. Se ordenan juntas, sin importar el país, por retorno de 200 sesiones, tendencia y caída máxima.</p>
+              <p className="mt-1 max-w-2xl text-[11px] leading-relaxed text-muted-foreground">Las 10 mejores pistas de un barrido de ETF de todo el mundo emergente. Se ordenan juntas, sin importar el país, por retorno de 200 sesiones, tendencia, caída máxima, costo y liquidez.</p>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2 self-start">
@@ -803,6 +810,12 @@ function EmergingMarketIdeasSection() {
       {hasPartialData ? <div className="border-b border-card-border bg-secondary/35 px-4 py-2.5 text-[10px] leading-relaxed text-muted-foreground" data-testid="status-emerging-ideas-partial">Datos parciales: {payload?.errors.join(" · ")}</div> : null}
 
       <div className="p-4 sm:p-6">
+        {payload && allIdeas.length ? (
+          <div className="mb-4 flex flex-wrap items-center gap-2 print:hidden">
+            <button type="button" onClick={() => setCapOnly((value) => !value)} aria-pressed={capOnly} className={`inline-flex min-h-9 items-center gap-2 rounded-full border px-3.5 text-[11px] font-bold transition-colors ${capOnly ? "border-primary bg-primary text-primary-foreground" : "border-card-border bg-card text-muted-foreground hover:text-foreground"}`} data-testid="toggle-emerging-ideas-cap-only"><Check className={`h-3.5 w-3.5 ${capOnly ? "" : "opacity-0"}`} /> Solo indexados por capitalización</button>
+            <span className="text-[10px] text-muted-foreground">{capOnly ? "Se ocultan los fondos de fundamentales, dividendos, factores, temas o exclusiones." : "Incluye también fondos con reglas propias de selección."}</span>
+          </div>
+        ) : null}
         {ideasQuery.isLoading && !payload ? (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3" data-testid="loading-emerging-ideas">
             {[1, 2, 3, 4, 5, 6].map((item) => <SkeletonBlock key={item} className="h-[248px]" />)}
@@ -843,7 +856,9 @@ function EmergingMarketIdeasSection() {
                     ["Caída máxima", formatIdeaValue(idea.maxDrawdown, "%")],
                     ["Volatilidad anual", formatIdeaValue(idea.volatility, "%")],
                     ["Dividendo 12 meses", typeof idea.dividendYield === "number" ? formatIdeaValue(idea.dividendYield, "%") : "Sin pagos"],
-                    ["Sesiones válidas", formatIdeaValue(idea.historySessions, "", 0)],
+                    ["Ratio de gastos", formatIdeaValue(idea.expenseRatio, "%")],
+                    ["Liquidez diaria", formatDollarVolume(idea.avgDollarVolume)],
+                    ["Estilo", idea.indexStyle],
                   ].map(([label, value]) => <div key={String(label)} className="rounded-xl bg-secondary/55 px-2.5 py-2" data-testid={`metric-emerging-idea-${idea.ticker}-${String(label).toLowerCase().replaceAll(" ", "-")}`}><p className="text-[9px] font-bold uppercase tracking-[.08em] text-muted-foreground">{label}</p><p className="mt-1 truncate font-mono-app text-[11px] font-bold text-foreground">{value ?? "No disponible"}</p></div>)}
                 </div>
                 <div className="mt-3 flex items-center justify-between border-t border-card-border pt-3 text-[10px] text-muted-foreground">
@@ -854,7 +869,7 @@ function EmergingMarketIdeasSection() {
             ))}
           </div>
         )}
-        <div className="mt-4 rounded-xl border border-card-border bg-secondary/40 px-3 py-2.5 text-[10px] leading-relaxed text-muted-foreground" data-testid="disclaimer-emerging-ideas">Estas son <strong className="text-foreground">ideas para investigar</strong>, no recomendaciones ni asesoramiento financiero. El ranking no cambia las señales JB ni sustituye sus reglas de RSI/SMA. El puntaje parte de 50 y suma el retorno de 200 sesiones (hasta ±50), ±10 por tendencia y resta hasta 20 por la caída máxima. Es una lectura de impulso del pasado y no anticipa lo que hará el fondo. Solo entran fondos con 200 sesiones completas de datos de Yahoo Finance.</div>
+        <div className="mt-4 rounded-xl border border-card-border bg-secondary/40 px-3 py-2.5 text-[10px] leading-relaxed text-muted-foreground" data-testid="disclaimer-emerging-ideas">Estas son <strong className="text-foreground">ideas para investigar</strong>, no recomendaciones ni asesoramiento financiero. El ranking no cambia las señales JB ni sustituye sus reglas de RSI/SMA. El puntaje parte de 50 y suma el retorno de 200 sesiones (hasta ±50) y ±10 por tendencia. Resta hasta 20 por la caída máxima, hasta 8 por un ratio de gastos alto (1 punto por cada 0,10 % sobre 0,20 %) y 5 si se negocian menos de US$ 5 millones diarios. Es una lectura de impulso del pasado y no anticipa lo que hará el fondo. Solo entran fondos con 200 sesiones completas de datos de Yahoo Finance. Los ratios de gastos se revisan a mano (última revisión: {payload?.expenseRatiosAsOf ?? "No disponible"}).</div>
       </div>
     </section>
   );
