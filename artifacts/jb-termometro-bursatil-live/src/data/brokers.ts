@@ -151,6 +151,7 @@ export const BROKERS: Broker[] = [
   {
     slug: "trade-republic",
     mark: "TR",
+    logo: "/brokers/trade-republic.png",
     name: "Trade Republic",
     summary: "Banco digital europeo para invertir en acciones, ETF y planes de ahorro.",
     regions: ["Europa"],
