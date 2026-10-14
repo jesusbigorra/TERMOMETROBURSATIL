@@ -28,7 +28,7 @@ function BrokerCard({ broker }: { broker: Broker }) {
     <header className="flex items-start gap-3">
       <BrokerLogo broker={broker} />
       <div className="min-w-0">
-        <h2 className="font-display text-lg font-bold tracking-[-0.02em]">{broker.name}</h2>
+        <h2 translate="no" className="notranslate font-display text-lg font-bold tracking-[-0.02em]">{broker.name}</h2>
         <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">{broker.summary}</p>
       </div>
     </header>
