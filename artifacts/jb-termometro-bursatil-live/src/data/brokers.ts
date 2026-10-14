@@ -81,6 +81,7 @@ export const BROKERS: Broker[] = [
   {
     slug: "interactive-brokers",
     mark: "IB",
+    logo: "/brokers/interactive-brokers.png",
     name: "Interactive Brokers",
     summary: "Acceso a mercados globales de acciones, opciones, futuros, divisas y bonos.",
     regions: ["Global", "EE. UU.", "Europa"],
