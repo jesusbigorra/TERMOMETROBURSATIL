@@ -130,6 +130,25 @@ rewrites `/api/*` to the API domain and everything else to `index.html`.
   Trade Republic's BaFin/ECB supervision and 90% / EUR 20,000 compensation figure come from a secondary source
   (EU Personal Finance); confirm with Trade Republic support.
 
+## Mercado page (Oct 2026)
+
+- `termobursatil.com/mercado` (`components/market-page.tsx`) and the index tape at the top of the home page and of
+  `/mercado` (`components/market-ticker.tsx`). Own components, no TradingView widgets (no third-party scripts, matches the
+  light theme). Sidebar link "Mercado" in `App.tsx`.
+- Data: `GET /api/market/pulse` (`routes/market.ts`, `lib/market-pulse.ts`). Daily change from Yahoo's chart endpoint
+  (range 5d, vs the last close of a previous session); block size = price x shares outstanding from SEC EDGAR
+  (`getSecShares` in `lib/sec-fundamentals.ts`). In-memory cache 5 min (60 s while partial), CDN `s-maxage` 300.
+  Tape tickers and the 11 sectors with their big names live in `market-pulse.ts` (`TAPE`, `SECTORS`).
+- Left out on purpose: META, V, MA, BRK-B, NKE. They have several share classes and SEC company facts return one class,
+  so their size came out wrong (Visa, Mastercard, Berkshire and Nike at a fraction, Meta without a figure). Do not add
+  multi-class names until there is a reliable market-cap source. The same limitation affects `marketCap` in
+  `getSecFundamentals` (Valor tab) for those tickers.
+- Calendar: `data/economic-calendar.ts`, hand-maintained from official schedules (Fed FOMC, BLS CPI and jobs, BEA GDP and PCE).
+  Dates only, no consensus forecasts. Reviewed 14 Oct 2026; BEA 2027 dates were not published yet. Add the next
+  events when the agencies publish them and update `CALENDAR_REVIEWED_ON`.
+- To check a change before production: deploy the API branch as a preview, then deploy the frontend from a throwaway
+  branch whose only change is `vercel.json` pointing `/api` at that preview API. Never merge that branch.
+
 ## Known gaps after leaving Replit
 
 - Product image uploads: `src/lib/objectStorage.ts` and `src/routes/storage.ts` call the Replit

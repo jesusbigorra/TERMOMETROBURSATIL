@@ -24,7 +24,7 @@ function Tile({ x = 0, y = 0, width = 0, height = 0, depth = 0, index = 0, name 
   return <g>
     <rect x={x} y={y} width={width} height={height} fill={tileColor(change)} stroke="#ffffff" strokeWidth={1} />
     {showText && <text x={x + width / 2} y={y + height / 2 - (height > 40 ? 2 : -3)} textAnchor="middle" fontSize={width > 70 ? 13 : 10} fontWeight={700} fill="#0f172a">{name}</text>}
-    {index === 0 && sector && width > 60 && height > 18 && <g>
+    {index === 0 && sector && width > 100 && height > 30 && <g>
       <rect x={x + 2} y={y + 2} width={Math.min(width - 4, sector.length * 6 + 10)} height={14} rx={3} fill="#ffffff" opacity={0.85} />
       <text x={x + 7} y={y + 12} fontSize={9} fontWeight={700} fill="#0f172a" style={{ textTransform: "uppercase", letterSpacing: "0.04em" }}>{sector}</text>
     </g>}
