@@ -57,6 +57,7 @@ export const BROKERS: Broker[] = [
   {
     slug: "etoro",
     mark: "eT",
+    logo: "/brokers/etoro.png",
     name: "eToro",
     summary: "Plataforma de inversión social con acciones, ETF y criptoactivos, organizada en entidades por región.",
     regions: ["Global", "Europa", "EE. UU."],
