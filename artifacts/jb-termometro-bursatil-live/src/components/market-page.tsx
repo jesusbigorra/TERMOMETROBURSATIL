@@ -16,21 +16,18 @@ function tileColor(change: number | null): string {
   return change >= 0 ? `hsl(145 55% ${light}%)` : `hsl(2 65% ${light}%)`;
 }
 
-type TileProps = { x?: number; y?: number; width?: number; height?: number; depth?: number; name?: string; change?: number | null; sector?: string };
+type TileProps = { x?: number; y?: number; width?: number; height?: number; depth?: number; index?: number; name?: string; change?: number | null; sector?: string };
 
-function Tile({ x = 0, y = 0, width = 0, height = 0, depth = 0, name = "", change = null }: TileProps) {
-  if (depth === 1) {
-    // Borde y etiqueta del sector
-    return <g>
-      <rect x={x} y={y} width={width} height={height} fill="none" stroke="#ffffff" strokeWidth={3} />
-      {width > 70 && height > 22 && <text x={x + 6} y={y + 14} fontSize={10} fontWeight={700} fill="#0f172a" opacity={0.7} style={{ textTransform: "uppercase", letterSpacing: "0.06em" }}>{name}</text>}
-    </g>;
-  }
+function Tile({ x = 0, y = 0, width = 0, height = 0, depth = 0, index = 0, name = "", change = null, sector = "" }: TileProps) {
   if (depth !== 2) return <g />;
   const showText = width > 34 && height > 26;
   return <g>
     <rect x={x} y={y} width={width} height={height} fill={tileColor(change)} stroke="#ffffff" strokeWidth={1} />
     {showText && <text x={x + width / 2} y={y + height / 2 - (height > 40 ? 2 : -3)} textAnchor="middle" fontSize={width > 70 ? 13 : 10} fontWeight={700} fill="#0f172a">{name}</text>}
+    {index === 0 && sector && width > 60 && height > 18 && <g>
+      <rect x={x + 2} y={y + 2} width={Math.min(width - 4, sector.length * 6 + 10)} height={14} rx={3} fill="#ffffff" opacity={0.85} />
+      <text x={x + 7} y={y + 12} fontSize={9} fontWeight={700} fill="#0f172a" style={{ textTransform: "uppercase", letterSpacing: "0.04em" }}>{sector}</text>
+    </g>}
     {showText && height > 40 && change !== null && <text x={x + width / 2} y={y + height / 2 + 13} textAnchor="middle" fontSize={10} fill="#0f172a">{`${change >= 0 ? "+" : ""}${change.toFixed(2)}%`}</text>}
   </g>;
 }
