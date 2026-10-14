@@ -172,13 +172,38 @@ export async function getSecFundamentals(ticker: string, price: number): Promise
   }
 }
 
+// Companies with several share classes list one cover-page figure per class. The usual period
+// deduplication keeps only one of them, so here we add up every class from the latest filing.
+// Berkshire's class A is worth 1,500 class B shares, so it is converted to B-equivalents.
+const BERKSHIRE_A_TO_B = 1500;
+
+function latestShareCount(facts: CompanyFacts, ticker: string): number | null {
+  let best: Fact[] = [];
+  for (const tag of TAGS.shares) {
+    for (const taxonomy of ["us-gaap", "dei"]) {
+      const list = (facts.facts?.[taxonomy]?.[tag]?.units?.shares ?? []).filter((fact) => Number.isFinite(fact.val) && fact.val > 0 && (!fact.form || /^(10-K|10-Q|20-F|40-F)/.test(fact.form)));
+      if (list.length && (!best.length || list.reduce((m, f) => (f.end > m ? f.end : m), "") > best.reduce((m, f) => (f.end > m ? f.end : m), ""))) best = list;
+    }
+  }
+  if (!best.length) return null;
+  const latestEnd = best.reduce((m, f) => (f.end > m ? f.end : m), "");
+  const atEnd = best.filter((fact) => fact.end === latestEnd);
+  const latestFiled = atEnd.reduce((m, f) => ((f.filed ?? "") > m ? (f.filed ?? "") : m), "");
+  const values = atEnd.filter((fact) => (fact.filed ?? "") === latestFiled).map((fact) => fact.val);
+  if (!values.length) return null;
+  if (ticker.toUpperCase() === "BRK-B" && values.length > 1) {
+    const sorted = [...values].sort((a, b) => b - a);
+    return sorted[0] + BERKSHIRE_A_TO_B * sorted[sorted.length - 1];
+  }
+  return values.reduce((sum, value) => sum + value, 0);
+}
+
 // Latest shares outstanding reported to the SEC. Shares move slowly, so callers cache this for a day.
 export async function getSecShares(ticker: string): Promise<number | null> {
   try {
     const cik = await cikFor(ticker);
     if (!cik) return null;
-    const facts = await companyFacts(cik);
-    return latestInstant(factsFor(facts, TAGS.shares, "shares"));
+    return latestShareCount(await companyFacts(cik), ticker);
   } catch {
     return null;
   }
