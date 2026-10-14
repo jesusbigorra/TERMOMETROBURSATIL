@@ -16,13 +16,16 @@ export const TAPE = [
 
 // Largest companies of each GICS sector, plus the sector SPDR ETF. Sizes are computed live,
 // so the lists only need to contain the big names, not be ordered or exhaustive.
+// Left out on purpose: META, V, MA, BRK-B and NKE. They have several share classes and SEC's company
+// facts return a single class (checked in Oct 2026: Visa, Mastercard, Berkshire and Nike came out
+// at a fraction of their real size, Meta had no figure), so their blocks would be wrong.
 export const SECTORS = [
   { key: "tech", name: "Tecnología", etf: "XLK", stocks: ["AAPL", "MSFT", "NVDA", "AVGO", "ORCL", "CRM"] },
-  { key: "comm", name: "Comunicaciones", etf: "XLC", stocks: ["GOOGL", "META", "NFLX", "DIS", "T"] },
-  { key: "disc", name: "Consumo discrecional", etf: "XLY", stocks: ["AMZN", "TSLA", "HD", "MCD", "NKE"] },
+  { key: "comm", name: "Comunicaciones", etf: "XLC", stocks: ["GOOGL", "NFLX", "DIS", "T", "VZ", "TMUS"] },
+  { key: "disc", name: "Consumo discrecional", etf: "XLY", stocks: ["AMZN", "TSLA", "HD", "MCD", "LOW", "BKNG"] },
   { key: "staples", name: "Consumo básico", etf: "XLP", stocks: ["WMT", "COST", "PG", "KO", "PEP"] },
   { key: "health", name: "Salud", etf: "XLV", stocks: ["LLY", "UNH", "JNJ", "ABBV", "MRK"] },
-  { key: "fin", name: "Financiero", etf: "XLF", stocks: ["BRK-B", "JPM", "V", "MA", "BAC"] },
+  { key: "fin", name: "Financiero", etf: "XLF", stocks: ["JPM", "BAC", "WFC", "GS", "MS", "C"] },
   { key: "ind", name: "Industriales", etf: "XLI", stocks: ["GE", "CAT", "RTX", "UNP", "HON"] },
   { key: "energy", name: "Energía", etf: "XLE", stocks: ["XOM", "CVX", "COP", "SLB", "EOG"] },
   { key: "util", name: "Servicios públicos", etf: "XLU", stocks: ["NEE", "SO", "DUK", "CEG"] },

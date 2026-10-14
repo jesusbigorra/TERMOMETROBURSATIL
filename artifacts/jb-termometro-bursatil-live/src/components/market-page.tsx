@@ -147,7 +147,7 @@ export function MarketPage({ onBack }: { onBack: () => void }) {
       <div className="mt-6 grid gap-5 lg:grid-cols-[3fr_2fr]">
         <Card className="min-w-0">
           <h2 className="font-display text-lg font-bold tracking-[-0.02em]">Mapa de calor del S&amp;P 500</h2>
-          <p className="mt-1 mb-4 text-[12.5px] leading-relaxed text-muted-foreground">Las mayores empresas de cada sector, coloreadas por su variación del día. Muestra las principales, no las 500.</p>
+          <p className="mt-1 mb-4 text-[12.5px] leading-relaxed text-muted-foreground">Las mayores empresas de cada sector, coloreadas por su variación del día. Muestra las principales, no las 500. Faltan Meta, Visa, Mastercard, Berkshire y Nike: tienen varias clases de acciones y la fuente de datos no permite calcular bien su tamaño.</p>
           {isLoading && <div className="grid h-[460px] place-items-center rounded-xl bg-secondary/50 text-sm text-muted-foreground sm:h-[540px]">Cargando mercado...</div>}
           {isError && <div className="grid h-[460px] place-items-center rounded-xl bg-secondary/50 px-6 text-center text-sm text-muted-foreground sm:h-[540px]"><div><p>No pudimos cargar el mapa ahora.</p><button type="button" onClick={() => void refetch()} className="mt-3 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground">Reintentar</button></div></div>}
           {data && <Heatmap pulse={data} />}
