@@ -7,9 +7,10 @@ import { RecommendedSection } from "@/components/recommended";
 import { TelegramAlerts } from "@/components/telegram-alerts";
 import { AdminPage } from "@/components/admin-page";
 import { MethodologyPage } from "@/components/methodology-page";
+import { BrokersPage } from "@/components/brokers-page";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Star, Activity as ActivityIcon, Archive, ArrowDownRight, ArrowUpRight, BarChart3, BellRing, Check, ChevronDown, CircleHelp, Clock3, Download, ExternalLink, Filter, Gauge, Gem, Globe2, LayoutDashboard, LogIn, LogOut, Moon, MoreHorizontal, PanelLeftClose, Plus, Printer, Radio, RefreshCw, Search, ShieldAlert, SlidersHorizontal, Sparkles, Sun, TrendingDown, TrendingUp, Wifi, X } from "lucide-react";
+import { Star, Landmark, Activity as ActivityIcon, Archive, ArrowDownRight, ArrowUpRight, BarChart3, BellRing, Check, ChevronDown, CircleHelp, Clock3, Download, ExternalLink, Filter, Gauge, Gem, Globe2, LayoutDashboard, LogIn, LogOut, Moon, MoreHorizontal, PanelLeftClose, Plus, Printer, Radio, RefreshCw, Search, ShieldAlert, SlidersHorizontal, Sparkles, Sun, TrendingDown, TrendingUp, Wifi, X } from "lucide-react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Route, Switch, useLocation, Router as WouterRouter } from "wouter";
 import { ClerkProvider, Show, SignIn, SignUp, useAuth, useClerk, useUser } from "@clerk/react";
@@ -685,6 +686,7 @@ function Sidebar({ isDark, setIsDark }: { isDark: boolean; setIsDark: (value: bo
           const Icon = item.icon;
           return <button key={item.key} type="button" data-nav={item.key} aria-current={active === item.key ? "true" : undefined} onClick={() => goTo(item.key, item.target)} className={`sidebar-link${active === item.key ? " sidebar-link-active" : ""}`}><Icon className="h-4 w-4" /> {item.label}</button>;
         })}
+        <a href={`${basePath}/brokers`} className="sidebar-link"><Landmark className="h-4 w-4" /> Brokers</a>
       </nav>
       <div className="mt-auto hidden space-y-3 lg:block">
         <div className="rounded-2xl border border-sidebar-border bg-sidebar-accent/50 p-3">
@@ -1388,6 +1390,12 @@ function SignUpPage() {
 // Only shows the link; the API enforces access (ADMIN_EMAILS on the server).
 const ADMIN_EMAILS = new Set(["jesus201@gmail.com"]);
 
+function BrokersRoute() {
+  const [, setLocation] = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+  return <div className="min-h-screen bg-background text-foreground"><BrokersPage onBack={() => setLocation("/")} /></div>;
+}
+
 function MethodologyRoute() {
   const [, setLocation] = useLocation();
   useEffect(() => { window.scrollTo(0, 0); }, []);
@@ -1400,7 +1408,7 @@ function AdminRoute() {
 }
 
 function Router() {
-  return <ErrorBoundary resetKey={useLocation()[0]}><Switch><Route path="/" component={Dashboard} /><Route path="/admin" component={AdminRoute} /><Route path="/metodologia" component={MethodologyRoute} /><Route path="/sign-in/*?" component={SignInPage} /><Route path="/sign-up/*?" component={SignUpPage} /><Route component={Dashboard} /></Switch></ErrorBoundary>;
+  return <ErrorBoundary resetKey={useLocation()[0]}><Switch><Route path="/" component={Dashboard} /><Route path="/admin" component={AdminRoute} /><Route path="/metodologia" component={MethodologyRoute} /><Route path="/brokers" component={BrokersRoute} /><Route path="/sign-in/*?" component={SignInPage} /><Route path="/sign-up/*?" component={SignUpPage} /><Route component={Dashboard} /></Switch></ErrorBoundary>;
 }
 
 function ClerkApp() {
