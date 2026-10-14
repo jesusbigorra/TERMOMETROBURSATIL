@@ -130,6 +130,7 @@ export const BROKERS: Broker[] = [
   {
     slug: "forex-com",
     mark: "FX",
+    logo: "/brokers/forex-com.png",
     name: "FOREX.com",
     summary: "Intercambio de divisas y futuros, operado por el grupo StoneX.",
     regions: ["EE. UU."],
