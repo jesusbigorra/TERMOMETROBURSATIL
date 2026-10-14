@@ -18,7 +18,7 @@ function SectionLabel({ icon, children }: { icon: ReactNode; children: ReactNode
 function BrokerLogo({ broker }: { broker: Broker }) {
   const [failed, setFailed] = useState(false);
   if (broker.logo && !failed) {
-    return <img src={`${basePath}${broker.logo}`} alt={`Logo de ${broker.name}`} onError={() => setFailed(true)} className="h-12 w-12 shrink-0 rounded-xl border border-card-border bg-white object-contain p-1.5" />;
+    return <img src={`${basePath}${broker.logo}`} alt={`Logo de ${broker.name}`} onError={() => setFailed(true)} className="h-12 w-auto max-w-[9.5rem] shrink-0 rounded-xl border border-card-border bg-white object-contain px-2.5 py-1.5" />;
   }
   return <span aria-hidden="true" className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-foreground text-sm font-extrabold tracking-[-0.04em] text-[#f7c96b]">{broker.mark}</span>;
 }

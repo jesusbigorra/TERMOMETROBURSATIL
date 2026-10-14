@@ -36,6 +36,7 @@ export const BROKERS: Broker[] = [
   {
     slug: "folionet",
     mark: "FO",
+    logo: "/brokers/folionet.png",
     name: "Folionet",
     summary: "Corretaje de acciones, ETF y bonos del Tesoro de EE. UU., con cuentas asesoradas.",
     regions: ["EE. UU."],
