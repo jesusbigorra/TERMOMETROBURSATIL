@@ -108,6 +108,28 @@ rewrites `/api/*` to the API domain and everything else to `index.html`.
   zone purchases and the day-1 DCA baseline; the lump-sum comparison was removed on purpose. 1 and 3 years only
   (zones need one year of warm-up inside the 5-year history).
 
+## Brokers page (Oct 2026)
+
+- `termobursatil.com/brokers` (`components/brokers-page.tsx`, linked from the sidebar in `App.tsx`). All content
+  lives in `artifacts/jb-termometro-bursatil-live/src/data/brokers.ts` (`BROKERS` array + `REVIEWED_ON`); the page
+  renders whatever is there, so adding a broker needs no component change.
+- Add a broker: append an entry with `slug`, `name`, `mark` (2-letter initials shown while there is no logo),
+  `summary`, `regions` (`EE. UU.` | `Europa` | `Global`; new regions also go in `BrokerRegion` and `FILTERS`),
+  `zone`, `regulators`, `protection`, `caveat`, `website`, optional `login`, and `sources` (official URLs).
+  Take every figure from the broker's own regulation / investor-protection page, then update `REVIEWED_ON`.
+- Logos: official files supplied by Jesús, never drawn or recreated. Put the file in
+  `public/brokers/<slug>.png` (SVG preferred), crop the white margin (Pillow bbox crop, ~10-20 px padding),
+  cap the width near 900 px, and set `logo: "/brokers/<slug>.png"`. The card box is `h-12`, `max-w-[9.5rem]`, white
+  background, so wide wordmarks work best. Without `logo` (or if it fails to load) the card shows `mark`.
+- Current logos are low resolution for Folionet (210 px) and Trade Republic (308 px); replace with SVG or larger
+  files when available.
+- `index.html` declares `lang="es"` and broker names carry `translate="no"`: with `lang="en"` Chrome auto-translated
+  "Trade Republic" to "República comercial". Keep brand names marked `translate="no"`.
+- Product rules: neutral and informational, no ranking or recommendation; the page warns that SIPC/FSCS/ICF cover broker
+  failure, not market losses, and that availability for each country must be confirmed on the broker's site.
+  Trade Republic's BaFin/ECB supervision and 90% / EUR 20,000 compensation figure come from a secondary source
+  (EU Personal Finance); confirm with Trade Republic support.
+
 ## Known gaps after leaving Replit
 
 - Product image uploads: `src/lib/objectStorage.ts` and `src/routes/storage.ts` call the Replit
