@@ -51,7 +51,6 @@ export const BROKERS: Broker[] = [
     ],
     caveat: "Sus productos no tienen seguro FDIC ni garantía bancaria y pueden perder valor.",
     website: "https://www.folionet.com/",
-    login: { label: "Iniciar sesión", url: "https://web.folionet.com/login" },
     sources: [{ label: "Folionet", url: "https://www.folionet.com/" }],
   },
   {
