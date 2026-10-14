@@ -107,6 +107,7 @@ export const BROKERS: Broker[] = [
   {
     slug: "robinhood",
     mark: "RH",
+    logo: "/brokers/robinhood.png",
     name: "Robinhood",
     summary: "Corretaje de acciones y ETF con opción de criptoactivos.",
     regions: ["EE. UU."],
