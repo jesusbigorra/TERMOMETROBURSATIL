@@ -8,6 +8,8 @@ import { TelegramAlerts } from "@/components/telegram-alerts";
 import { AdminPage } from "@/components/admin-page";
 import { MethodologyPage } from "@/components/methodology-page";
 import { BrokersPage } from "@/components/brokers-page";
+import { MarketPage } from "@/components/market-page";
+import { MarketTicker } from "@/components/market-ticker";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Star, Landmark, Activity as ActivityIcon, Archive, ArrowDownRight, ArrowUpRight, BarChart3, BellRing, Check, ChevronDown, CircleHelp, Clock3, Download, ExternalLink, Filter, Gauge, Gem, Globe2, LayoutDashboard, LogIn, LogOut, Moon, MoreHorizontal, PanelLeftClose, Plus, Printer, Radio, RefreshCw, Search, ShieldAlert, SlidersHorizontal, Sparkles, Sun, TrendingDown, TrendingUp, Wifi, X } from "lucide-react";
@@ -686,6 +688,7 @@ function Sidebar({ isDark, setIsDark }: { isDark: boolean; setIsDark: (value: bo
           const Icon = item.icon;
           return <button key={item.key} type="button" data-nav={item.key} aria-current={active === item.key ? "true" : undefined} onClick={() => goTo(item.key, item.target)} className={`sidebar-link${active === item.key ? " sidebar-link-active" : ""}`}><Icon className="h-4 w-4" /> {item.label}</button>;
         })}
+        <a href={`${basePath}/mercado`} className="sidebar-link"><Globe2 className="h-4 w-4" /> Mercado</a>
         <a href={`${basePath}/brokers`} className="sidebar-link"><Landmark className="h-4 w-4" /> Brokers</a>
       </nav>
       <div className="mt-auto hidden space-y-3 lg:block">
@@ -1320,6 +1323,7 @@ function Dashboard() {
     <div className="min-h-[100dvh] overflow-x-clip bg-background">
       <Sidebar isDark={isDark} setIsDark={setIsDark} />
       <main className="min-h-[100dvh] min-w-0 lg:ml-[238px]">
+        <MarketTicker />
         <div className="mx-auto min-w-0 max-w-[1480px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
           <header className="dashboard-reveal mb-6 flex min-w-0 flex-col gap-5 border-b border-border pb-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
@@ -1390,6 +1394,12 @@ function SignUpPage() {
 // Only shows the link; the API enforces access (ADMIN_EMAILS on the server).
 const ADMIN_EMAILS = new Set(["jesus201@gmail.com"]);
 
+function MarketRoute() {
+  const [, setLocation] = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+  return <div className="min-h-screen bg-background text-foreground"><MarketPage onBack={() => setLocation("/")} /></div>;
+}
+
 function BrokersRoute() {
   const [, setLocation] = useLocation();
   useEffect(() => { window.scrollTo(0, 0); }, []);
@@ -1408,7 +1418,7 @@ function AdminRoute() {
 }
 
 function Router() {
-  return <ErrorBoundary resetKey={useLocation()[0]}><Switch><Route path="/" component={Dashboard} /><Route path="/admin" component={AdminRoute} /><Route path="/metodologia" component={MethodologyRoute} /><Route path="/brokers" component={BrokersRoute} /><Route path="/sign-in/*?" component={SignInPage} /><Route path="/sign-up/*?" component={SignUpPage} /><Route component={Dashboard} /></Switch></ErrorBoundary>;
+  return <ErrorBoundary resetKey={useLocation()[0]}><Switch><Route path="/" component={Dashboard} /><Route path="/admin" component={AdminRoute} /><Route path="/metodologia" component={MethodologyRoute} /><Route path="/brokers" component={BrokersRoute} /><Route path="/mercado" component={MarketRoute} /><Route path="/sign-in/*?" component={SignInPage} /><Route path="/sign-up/*?" component={SignUpPage} /><Route component={Dashboard} /></Switch></ErrorBoundary>;
 }
 
 function ClerkApp() {

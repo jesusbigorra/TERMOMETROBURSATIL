@@ -10,6 +10,7 @@ import { searchMarketInstruments } from "../lib/market-data";
 import { getEmergingMarketIdeas } from "../lib/emerging-market-ideas";
 import { getAssetAnalysis, getLongHistory } from "../lib/asset-analysis";
 import { isValidTicker } from "../lib/market-data";
+import { getMarketPulse } from "../lib/market-pulse";
 
 const router: IRouter = Router();
 
@@ -85,6 +86,17 @@ router.get("/market/history/:ticker", async (req, res): Promise<void> => {
   } catch (error) {
     req.log.warn({ err: error, ticker }, "Long history unavailable");
     res.status(503).json({ error: "No pudimos traer la historia de este activo." });
+  }
+});
+
+router.get("/market/pulse", async (req, res): Promise<void> => {
+  try {
+    const pulse = await getMarketPulse();
+    res.setHeader("Cache-Control", `public, s-maxage=${pulse.partial ? 60 : 300}, stale-while-revalidate=900`);
+    res.json(pulse);
+  } catch (error) {
+    req.log.warn({ err: error }, "Market pulse unavailable");
+    res.status(503).json({ error: "No pudimos obtener el pulso del mercado ahora. Inténtalo de nuevo." });
   }
 });
 

@@ -171,3 +171,15 @@ export async function getSecFundamentals(ticker: string, price: number): Promise
     return null;
   }
 }
+
+// Latest shares outstanding reported to the SEC. Shares move slowly, so callers cache this for a day.
+export async function getSecShares(ticker: string): Promise<number | null> {
+  try {
+    const cik = await cikFor(ticker);
+    if (!cik) return null;
+    const facts = await companyFacts(cik);
+    return latestInstant(factsFor(facts, TAGS.shares, "shares"));
+  } catch {
+    return null;
+  }
+}
