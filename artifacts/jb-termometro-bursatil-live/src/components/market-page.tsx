@@ -67,9 +67,9 @@ function Heatmap({ pulse }: { pulse: MarketPulse }) {
       <span className="inline-flex items-center gap-1.5"><span className="h-3 w-6 rounded-sm" style={{ background: tileColor(3) }} /> +3 % o más</span>
       <span>El tamaño de cada bloque es su capitalización de mercado.</span>
     </div>
-    <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+    <div className="mt-4 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 xl:grid-cols-3">
       {pulse.sectors.map((sector) => <div key={sector.key} className="flex items-center justify-between gap-2 rounded-xl bg-secondary/60 px-3 py-2 text-[12px]">
-        <span className="truncate">{sector.name} <span className="text-muted-foreground" translate="no">({sector.etf})</span></span>
+        <span className="min-w-0 leading-tight">{sector.name}<span className="block text-[10px] text-muted-foreground" translate="no">{sector.etf}</span></span>
         <b className={`font-mono-app ${(sector.etfChange ?? 0) >= 0 ? "text-emerald-600" : "text-red-600"}`}>{sector.etfChange === null ? "n. d." : `${sector.etfChange >= 0 ? "+" : ""}${sector.etfChange.toFixed(2)}%`}</b>
       </div>)}
     </div>
