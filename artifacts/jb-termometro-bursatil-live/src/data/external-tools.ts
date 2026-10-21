@@ -16,6 +16,7 @@ export const EL_FONDO: ExternalTool = {
   slug: "el-fondo",
   name: "El Fondo",
   mark: "EF",
+  logo: "/tools/el-fondo.svg",
   summary: "Simulador de portafolio con acciones, ETF y cripto. Proyecta tu cartera completa con un rango probable, sin registro.",
   cta: "Armar una cartera completa en El Fondo",
   href: () => "https://www.el-fondo.com/es/portfolio-simulator",
