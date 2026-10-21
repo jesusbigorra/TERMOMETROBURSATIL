@@ -1,6 +1,8 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Area, AreaChart, CartesianGrid, ComposedChart, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { ExternalTools } from "@/components/external-tools";
+import { EL_FONDO, ETF_TOOLS } from "@/data/external-tools";
 
 // ---------- Types (mirror of GET /api/market/analysis/:ticker) ----------
 type AnalysisPoint = { date: string; close: number; adjClose: number; volume: number | null; sma20: number | null; sma50: number | null; sma100: number | null; sma200: number | null; drawdown: number };
@@ -431,13 +433,14 @@ export function AssetInsights({ ticker, price, fallbackHistory, dcaContent }: { 
       {([["dca", "DCA"], ["risk", "Riesgo"], ["value", "Valor"]] as const).map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={lens === key} onClick={() => setLens(key)} className={`flex-1 rounded-xl px-3 py-2 text-xs font-bold transition-colors ${lens === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>)}
     </div>
 
-    {lens === "dca" && <>{dcaContent}<DcaSimulator history={fullHistory} loading={query.isLoading} /></>}
+    {lens === "dca" && <>{dcaContent}<DcaSimulator history={fullHistory} loading={query.isLoading} /><ExternalTools title="Para ir más lejos" tools={[EL_FONDO]} ticker={ticker} /></>}
     {lens !== "dca" && (query.isLoading ? <div className="mt-4 h-48 animate-pulse rounded-2xl bg-secondary/40" /> : !analysis ? <p className="mt-4 rounded-2xl bg-secondary/40 px-4 py-3 text-xs text-muted-foreground">{query.error instanceof Error ? query.error.message : "Análisis no disponible."}</p> : lens === "risk"
       ? <Section title="Riesgo" subtitle="Cuánto oscila, cuánto ha llegado a caer y cómo se comporta frente al S&P 500.">
         <RiskLens analysis={analysis} period={period} history={periodHistory} />
       </Section>
       : <Section title="Valor" subtitle={analysis.type === "ETF" ? "Costos, tamaño y composición del fondo." : "Valoración, calidad del negocio y dividendo."}>
         <ValueLens analysis={analysis} price={price} />
+        {analysis.type === "ETF" && <ExternalTools title="Más datos del fondo" tools={ETF_TOOLS} ticker={analysis.ticker} />}
       </Section>)}
     {analysis?.errors.length ? <p className="mt-2 text-[10px] text-muted-foreground">{analysis.errors.join(" ")}</p> : null}
   </>;
