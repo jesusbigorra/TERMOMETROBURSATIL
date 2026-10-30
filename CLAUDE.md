@@ -149,6 +149,20 @@ rewrites `/api/*` to the API domain and everything else to `index.html`.
 - To check a change before production: deploy the API branch as a preview, then deploy the frontend from a throwaway
   branch whose only change is `vercel.json` pointing `/api` at that preview API. Never merge that branch.
 
+## Portafolio page (Oct 2026)
+
+- `termobursatil.com/portafolio` (`components/portfolio-page.tsx`, sidebar link "Portafolio" in `App.tsx`). Each signed-in user
+  declares positions (ticker, units, optional average cost); nothing here changes the radar, watchlist or alerts.
+- API: `routes/portfolio.ts` (`GET /portfolio`, `PUT|DELETE /portfolio/:ticker`, requireAuth per route). Table
+  `portfolio_positions` (`lib/db/src/schema/portfolio.ts`) is created at runtime with `PORTFOLIO_DDL`, no drizzle push.
+  `GET /portfolio` enriches positions with `getRadarForTickers` (name, type, price, daily change, JB zone).
+- All maths is client side in `src/lib/portfolio-math.ts` (pure functions) over `/api/market/history/:ticker` (CDN cached) and SPY:
+  value series, drawdown, volatility, beta, annual returns, effective positions (1/Σw²).
+- The past is rebuilt with today's units on adjusted close (dividends reinvested), not with real purchase dates; the page says so.
+- Not built yet: sector / country / currency split and "stocks inside your ETFs" (no free ETF holdings source), expense ratio,
+  earnings dates, 13F "super investors", contribution plans, dashboard widget with top movers.
+- Vercel did not auto-deploy the push to `main` on 2026-10-30; both projects were deployed with `create_deployment` (gitSource github).
+
 ## Known gaps after leaving Replit
 
 - Product image uploads: `src/lib/objectStorage.ts` and `src/routes/storage.ts` call the Replit
