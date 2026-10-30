@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { logger } from "./logger";
+import { dailyChangePercent } from "./daily-change";
 
 export type RadarAsset = {
   ticker: string;
@@ -308,11 +309,7 @@ export async function fetchTicker(ticker: string): Promise<RadarAsset> {
     const quotedPrice = Number(meta.regularMarketPrice);
     const latest = Number.isFinite(quotedPrice) ? quotedPrice : closes.at(-1);
     if (typeof latest !== "number" || !Number.isFinite(latest)) throw new Error("precio no disponible");
-    const quotedPrevious = Number(meta.chartPreviousClose);
-    const previous = Number.isFinite(quotedPrevious) ? quotedPrevious : closes.at(-2);
-    const change = typeof previous === "number" && Number.isFinite(previous) && previous !== 0
-      ? Number((((latest - previous) / previous) * 100).toFixed(2))
-      : null;
+    const change = dailyChangePercent(latest, datedCloses.map(({ date }) => date), closes, Number(meta.regularMarketTime));
 
     const rsi = closes.length >= 15 ? computeRsi(closes) : null;
     const latestSma = (window: number) => closes.length >= window ? average(closes.slice(-window)) : null;

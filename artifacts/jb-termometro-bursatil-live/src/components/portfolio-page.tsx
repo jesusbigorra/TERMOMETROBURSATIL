@@ -331,6 +331,7 @@ export function PortfolioPage({ onBack, signInHref }: { onBack: () => void; sign
       <Card>
         <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Tu portafolio hoy</p>
         <p className="mt-1 font-display text-5xl font-bold tracking-[-0.06em]">{usd(total)}</p>
+        <p className="mt-1 text-[11px] text-muted-foreground">Valores orientativos con datos de mercado de Yahoo Finance. El valor exacto de tu cuenta está en tu broker.</p>
         <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-3 text-sm">
           <div><dt className="text-muted-foreground">Hoy</dt><dd className={`font-display text-xl font-bold ${tone(todayPct)}`}>{pct(todayPct)}</dd></div>
           <div><dt className="text-muted-foreground">Ganancia desde que compraste</dt><dd className={`font-display text-xl font-bold ${tone(costed.length ? gain : null)}`}>{costed.length ? `${gain >= 0 ? "+" : "−"}${usd(Math.abs(gain))}` : "—"}{gainPct !== null && <span className="ml-2 text-sm">{pct(gainPct)}</span>}</dd>{costed.length > 0 && costed.length < valued.length && <dd className="text-[11px] text-muted-foreground">Solo con las {costed.length} posiciones que tienen costo.</dd>}{costed.length === 0 && <dd className="text-[11px] text-muted-foreground">Añade el costo promedio para verla.</dd>}</div>
