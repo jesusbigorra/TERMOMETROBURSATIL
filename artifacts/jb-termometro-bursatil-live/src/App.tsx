@@ -10,6 +10,7 @@ import { MethodologyPage } from "@/components/methodology-page";
 import { BrokersPage } from "@/components/brokers-page";
 import { MarketPage } from "@/components/market-page";
 import { PortfolioPage } from "@/components/portfolio-page";
+import { PortfolioWidget } from "@/components/portfolio-widget";
 import { MarketTicker } from "@/components/market-ticker";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -1364,6 +1365,8 @@ function Dashboard() {
                 {rsiData.length ? <ResponsiveContainer width="100%" height={232}><BarChart data={rsiData} layout="vertical" margin={{ top: 5, right: 12, left: 4, bottom: 5 }}><CartesianGrid horizontal={false} stroke="hsl(var(--border))" strokeDasharray="2 3" /><XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} /><YAxis dataKey="ticker" type="category" width={48} tick={{ fontSize: 10, fill: "hsl(var(--foreground))", fontFamily: "DM Mono" }} axisLine={false} tickLine={false} /><Tooltip cursor={{ fill: "hsl(var(--secondary))" }} contentStyle={{ borderRadius: 12, border: "1px solid #d9ddd8", fontSize: 12, background: "#fbfaf6" }} formatter={(value: number) => [formatNumber(value, 0), "RSI"]} /><Bar dataKey="rsi" radius={[0, 5, 5, 0]} isAnimationActive={false}>{rsiData.map((item) => <Cell key={item.ticker} fill={isDcaRsiRange(item.rsi) ? CHART_COLORS.teal : item.rsi < DCA_RSI_MIN ? CHART_COLORS.coral : item.rsi > 65 ? CHART_COLORS.red : CHART_COLORS.amber} />)}</Bar></BarChart></ResponsiveContainer> : <div className="flex h-[232px] items-center justify-center text-sm text-muted-foreground">Sin lectura RSI.</div>}
               </ChartCard>
             </div>
+
+            <PortfolioWidget />
 
             <RecommendedSection signedIn={Boolean(isSignedIn)} owned={personalTickers} onAdd={addToWatchlist} signInHref={`${basePath}/sign-in`} />
 
