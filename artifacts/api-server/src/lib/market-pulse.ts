@@ -63,7 +63,7 @@ async function mapLimit<T, R>(items: readonly T[], limit: number, fn: (item: T) 
   return results;
 }
 
-async function fetchQuote(ticker: string): Promise<PulseQuote | null> {
+export async function fetchQuote(ticker: string): Promise<PulseQuote | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 7000);
   try {

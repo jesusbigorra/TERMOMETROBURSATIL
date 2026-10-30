@@ -4,6 +4,7 @@ import { Router, type IRouter } from "express";
 import { db, pool, PORTFOLIO_DDL, portfolioPositionsTable } from "@workspace/db";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
 import { fetchTicker, getRadarForTickers, isValidTicker } from "../lib/market-data";
+import { fetchQuote } from "../lib/market-pulse";
 
 // Portafolio personal: el usuario declara sus posiciones. No toca el radar,
 // la watchlist ni las alertas. requireAuth va por ruta (no con router.use)
@@ -43,17 +44,22 @@ router.get("/portfolio", requireAuth, async (req: AuthenticatedRequest, res): Pr
     // Precio, nombre, tipo y zona JB salen de la lectura que ya existe del radar.
     const radar = await getRadarForTickers(rows.map((row) => row.ticker)).catch(() => null);
     const byTicker = new Map((radar?.assets ?? []).map((asset) => [asset.ticker, asset]));
+    // El cambio diario del radar se mide contra el cierre de hace un año (rango 1y de Yahoo),
+    // así que aquí el precio y el cambio de hoy salen de la cotización de 5 días, que compara
+    // con el cierre de la sesión anterior.
+    const quotes = new Map((await Promise.all(rows.map((row) => fetchQuote(row.ticker)))).flatMap((quote) => (quote ? [[quote.ticker, quote] as const] : [])));
     const positions = rows
       .map((row) => {
         const asset = byTicker.get(row.ticker);
+        const quote = quotes.get(row.ticker);
         return {
           ticker: row.ticker,
           units: row.units,
           avgCost: row.avgCost,
           name: asset?.name ?? row.ticker,
           type: asset?.type ?? null,
-          price: asset?.price ?? null,
-          change: asset?.change ?? null,
+          price: quote?.price ?? asset?.price ?? null,
+          change: quote?.change ?? null,
           signal: asset && asset.level !== null ? asset.signal : null,
           level: asset?.level ?? null,
         };
