@@ -9,10 +9,11 @@ import { AdminPage } from "@/components/admin-page";
 import { MethodologyPage } from "@/components/methodology-page";
 import { BrokersPage } from "@/components/brokers-page";
 import { MarketPage } from "@/components/market-page";
+import { PortfolioPage } from "@/components/portfolio-page";
 import { MarketTicker } from "@/components/market-ticker";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Star, Landmark, Activity as ActivityIcon, Archive, ArrowDownRight, ArrowUpRight, BarChart3, BellRing, Check, ChevronDown, CircleHelp, Clock3, Download, ExternalLink, Filter, Gauge, Gem, Globe2, LayoutDashboard, LogIn, LogOut, Moon, MoreHorizontal, PanelLeftClose, Plus, Printer, Radio, RefreshCw, Search, ShieldAlert, SlidersHorizontal, Sparkles, Sun, TrendingDown, TrendingUp, Wifi, X } from "lucide-react";
+import { Star, Landmark, Activity as ActivityIcon, Archive, ArrowDownRight, ArrowUpRight, BarChart3, BellRing, Check, ChevronDown, CircleHelp, Clock3, Download, ExternalLink, Filter, Gauge, Gem, Globe2, LayoutDashboard, LogIn, LogOut, Moon, MoreHorizontal, PanelLeftClose, Plus, Printer, Radio, RefreshCw, Search, ShieldAlert, SlidersHorizontal, Sparkles, Sun, TrendingDown, TrendingUp, Wallet, Wifi, X } from "lucide-react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Route, Switch, useLocation, Router as WouterRouter } from "wouter";
 import { ClerkProvider, Show, SignIn, SignUp, useAuth, useClerk, useUser } from "@clerk/react";
@@ -690,6 +691,7 @@ function Sidebar({ isDark, setIsDark }: { isDark: boolean; setIsDark: (value: bo
         })}
         <a href={`${basePath}/mercado`} className="sidebar-link"><Globe2 className="h-4 w-4" /> Mercado</a>
         <a href={`${basePath}/brokers`} className="sidebar-link"><Landmark className="h-4 w-4" /> Brokers</a>
+        <a href={`${basePath}/portafolio`} className="sidebar-link"><Wallet className="h-4 w-4" /> Portafolio</a>
       </nav>
       <div className="mt-auto hidden space-y-3 lg:block">
         <div className="rounded-2xl border border-sidebar-border bg-sidebar-accent/50 p-3">
@@ -1406,6 +1408,12 @@ function BrokersRoute() {
   return <div className="min-h-screen bg-background text-foreground"><BrokersPage onBack={() => setLocation("/")} /></div>;
 }
 
+function PortfolioRoute() {
+  const [, setLocation] = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+  return <div className="min-h-screen bg-background text-foreground"><PortfolioPage onBack={() => setLocation("/")} signInHref={`${basePath}/sign-in?redirect_url=${encodeURIComponent(`${window.location.origin}${basePath}/portafolio`)}`} /></div>;
+}
+
 function MethodologyRoute() {
   const [, setLocation] = useLocation();
   useEffect(() => { window.scrollTo(0, 0); }, []);
@@ -1418,7 +1426,7 @@ function AdminRoute() {
 }
 
 function Router() {
-  return <ErrorBoundary resetKey={useLocation()[0]}><Switch><Route path="/" component={Dashboard} /><Route path="/admin" component={AdminRoute} /><Route path="/metodologia" component={MethodologyRoute} /><Route path="/brokers" component={BrokersRoute} /><Route path="/mercado" component={MarketRoute} /><Route path="/sign-in/*?" component={SignInPage} /><Route path="/sign-up/*?" component={SignUpPage} /><Route component={Dashboard} /></Switch></ErrorBoundary>;
+  return <ErrorBoundary resetKey={useLocation()[0]}><Switch><Route path="/" component={Dashboard} /><Route path="/admin" component={AdminRoute} /><Route path="/metodologia" component={MethodologyRoute} /><Route path="/brokers" component={BrokersRoute} /><Route path="/portafolio" component={PortfolioRoute} /><Route path="/mercado" component={MarketRoute} /><Route path="/sign-in/*?" component={SignInPage} /><Route path="/sign-up/*?" component={SignUpPage} /><Route component={Dashboard} /></Switch></ErrorBoundary>;
 }
 
 function ClerkApp() {
