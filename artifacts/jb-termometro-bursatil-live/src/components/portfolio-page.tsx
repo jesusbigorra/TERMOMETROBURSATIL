@@ -380,12 +380,12 @@ export function PortfolioPage({ onBack, signInHref }: { onBack: () => void; sign
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
-        <Card title="Caídas" subtitle="Cuánto estuvo tu combinación actual por debajo de su último máximo, día a día." action={<Pills options={["1A", "5A", "Máx"] as const} value={ddRange} onChange={setDdRange} />}>
+        <Card className="flex flex-col" title="Caídas" subtitle="Cuánto estuvo tu combinación actual por debajo de su último máximo, día a día." action={<Pills options={["1A", "5A", "Máx"] as const} value={ddRange} onChange={setDdRange} />}>
           <div className="flex flex-wrap gap-6">
             <div><p className="text-xs text-muted-foreground">Bajo el máximo hoy</p><p className="font-display text-2xl font-bold text-destructive">{pct(dd.current, 1, false)}</p></div>
             <div><p className="text-xs text-muted-foreground">Caída máxima en este periodo</p><p className="font-display text-2xl font-bold text-destructive">{pct(dd.max, 1, false)}</p></div>
           </div>
-          <div className="mt-3 h-44">{dd.series.length > 2 && <ResponsiveContainer width="100%" height="100%"><AreaChart data={dd.series} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}><XAxis dataKey="date" hide /><YAxis hide domain={["dataMin", 0]} /><Tooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(d: string) => dayFmt.format(asDate(d))} formatter={(v: number) => [pct(v, 1, false), "Bajo el máximo"]} /><Area type="monotone" dataKey="value" stroke="hsl(var(--destructive))" strokeWidth={1.2} fill="hsl(var(--destructive))" fillOpacity={0.12} dot={false} isAnimationActive={false} /></AreaChart></ResponsiveContainer>}</div>
+          <div className="mt-3 min-h-44 flex-1">{dd.series.length > 2 && <ResponsiveContainer width="100%" height="100%"><AreaChart data={dd.series} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}><XAxis dataKey="date" hide /><YAxis hide domain={["dataMin", 0]} /><Tooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(d: string) => dayFmt.format(asDate(d))} formatter={(v: number) => [pct(v, 1, false), "Bajo el máximo"]} /><Area type="monotone" dataKey="value" stroke="hsl(var(--destructive))" strokeWidth={1.2} fill="hsl(var(--destructive))" fillOpacity={0.12} dot={false} isAnimationActive={false} /></AreaChart></ResponsiveContainer>}</div>
           <Rows head={["", "Tú", "S&P 500"]} rows={[["Caída máxima en el periodo", pct(dd.max, 1, false), ddSpy ? pct(ddSpy.max, 1, false) : "—"]]} />
         </Card>
 
@@ -411,7 +411,7 @@ export function PortfolioPage({ onBack, signInHref }: { onBack: () => void; sign
       </div>
 
       {yearlyData.length > 0 && <Card title="Rendimiento por año" subtitle="Tu combinación actual frente al S&P 500, con dividendos reinvertidos.">
-        <div className="h-60"><ResponsiveContainer width="100%" height="100%"><BarChart data={yearlyData} margin={{ top: 12, right: 8, bottom: 0, left: 0 }}><CartesianGrid vertical={false} stroke="hsl(var(--border))" /><XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={11} /><YAxis tickFormatter={(v: number) => `${num(v * 100, 0)}%`} width={48} tickLine={false} axisLine={false} fontSize={11} /><Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number, name: string) => [pct(v, 1), name]} /><Legend /><Bar dataKey="tu" name="Tú" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} isAnimationActive={false} /><Bar dataKey="spy" name="S&P 500" fill="#cbd5e1" radius={[4, 4, 0, 0]} isAnimationActive={false} /></BarChart></ResponsiveContainer></div>
+        <div className="h-60"><ResponsiveContainer width="100%" height="100%"><BarChart data={yearlyData} margin={{ top: 12, right: 8, bottom: 0, left: 0 }}><CartesianGrid vertical={false} stroke="hsl(var(--border))" /><XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={11} /><YAxis tickFormatter={(v: number) => `${num(v * 100, 0)}%`} width={48} tickLine={false} axisLine={false} fontSize={11} /><Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number, name: string) => [pct(v, 1), name]} /><Legend formatter={(value: string) => <span className="text-foreground">{value}</span>} /><Bar dataKey="tu" name="Tú" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} isAnimationActive={false} /><Bar dataKey="spy" name="S&P 500" fill="#cbd5e1" radius={[4, 4, 0, 0]} isAnimationActive={false} /></BarChart></ResponsiveContainer></div>
         {yearlyData.some((d) => d.label.endsWith("*")) && <p className="mt-1 text-[11px] text-muted-foreground">* Año parcial: desde el primer dato común.</p>}
       </Card>}
 
