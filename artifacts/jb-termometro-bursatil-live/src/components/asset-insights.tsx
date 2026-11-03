@@ -362,9 +362,13 @@ function ValueLens({ analysis, price }: { analysis: AssetAnalysis; price: number
 }
 
 // ---------- Main ----------
-export function AssetInsights({ ticker, price, fallbackHistory, dcaContent }: { ticker: string; price: number; fallbackHistory: BasicPoint[]; dcaContent: ReactNode }) {
+type Lens = "signal" | "avg" | "ret" | "dca" | "risk" | "value";
+const LENSES: ReadonlyArray<readonly [Lens, string]> = [["signal", "Señal"], ["avg", "Medias"], ["ret", "Retornos"], ["dca", "DCA"], ["risk", "Riesgo"], ["value", "Valor"]];
+
+// Layout: `topContent` + chart stay pinned; only the tab content scrolls. The parent must be a flex column with a fixed max height.
+export function AssetInsights({ ticker, price, fallbackHistory, topContent, signalContent, averagesContent }: { ticker: string; price: number; fallbackHistory: BasicPoint[]; topContent: ReactNode; signalContent: ReactNode; averagesContent: ReactNode }) {
   const [period, setPeriod] = useState<PeriodKey>("1A");
-  const [lens, setLens] = useState<"dca" | "risk" | "value">("dca");
+  const [lens, setLens] = useState<Lens>("signal");
   const query = useQuery({
     queryKey: ["asset-analysis", ticker],
     queryFn: async (): Promise<AssetAnalysis> => {
@@ -385,20 +389,43 @@ export function AssetInsights({ ticker, price, fallbackHistory, dcaContent }: { 
   }, [analysis, periodHistory, period, fallbackHistory]);
   const available = (key: PeriodKey) => !analysis || analysis.periods.some((item) => item.key === key && item.startDate);
 
+  const returnsTable = <>
+    <div className="overflow-x-auto rounded-xl border border-card-border bg-card">
+      <table className="w-full min-w-[420px] text-[11px]">
+        <thead><tr className="text-left text-[9px] uppercase tracking-[.1em] text-muted-foreground"><th className="px-3 py-2">Período</th><th className="px-3 py-2 text-right">Rendimiento</th><th className="px-3 py-2 text-right">Promedio anual</th><th className="px-3 py-2 text-right">S&P 500</th><th className="px-3 py-2 text-right">Diferencia</th></tr></thead>
+        <tbody>{query.isLoading ? <tr><td colSpan={5} className="px-3 py-3 text-muted-foreground">Calculando rendimientos…</td></tr> : analysis ? analysis.periods.map((row) => {
+          const diff = row.totalReturn !== null && row.benchmarkReturn !== null ? row.totalReturn - row.benchmarkReturn : null;
+          const tone = (value: number | null) => value === null ? "text-muted-foreground" : value >= 0 ? "text-accent" : "text-destructive";
+          return <tr key={row.key} onClick={() => row.startDate && setPeriod(row.key as PeriodKey)} className={`cursor-pointer border-t border-card-border ${period === row.key ? "bg-secondary/60" : "hover:bg-secondary/30"}`}>
+            <td className="px-3 py-1.5 font-bold">{row.label}</td>
+            <td className={`px-3 py-1.5 text-right font-mono-app ${tone(row.totalReturn)}`}>{pct(row.totalReturn)}</td>
+            <td className={`px-3 py-1.5 text-right font-mono-app ${tone(row.cagr)}`}>{row.cagr === null ? (row.startDate ? <span className="text-muted-foreground">menos de 1 año</span> : "—") : `${pct(row.cagr)} / año`}</td>
+            <td className="px-3 py-1.5 text-right font-mono-app text-muted-foreground">{row.benchmarkCagr !== null ? `${pct(row.benchmarkCagr)} / año` : pct(row.benchmarkReturn)}</td>
+            <td className={`px-3 py-1.5 text-right font-mono-app ${tone(diff)}`}>{pct(diff)}</td>
+          </tr>;
+        }) : <tr><td colSpan={5} className="px-3 py-3 text-muted-foreground">{query.error instanceof Error ? query.error.message : "Sin datos"}</td></tr>}</tbody>
+      </table>
+    </div>
+    <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">Rendimiento total con dividendos reinvertidos. "Promedio anual" es la tasa compuesta anual (CAGR): cuánto habría crecido por año de forma constante. Solo se calcula para períodos de 1 año o más. Toca una fila para cambiar el gráfico a ese período.</p>
+  </>;
+
+  const waiting = query.isLoading ? <div className="mt-4 h-48 animate-pulse rounded-2xl bg-secondary/40" /> : !analysis ? <p className="mt-4 rounded-2xl bg-secondary/40 px-4 py-3 text-xs text-muted-foreground">{query.error instanceof Error ? query.error.message : "Análisis no disponible."}</p> : null;
+
   return <>
-    <Section
-      title="Evolución del precio y medias móviles"
-      subtitle="Cierres diarios de Yahoo Finance. La vista inicial es de 1 año; elige otro período para ampliar."
-      right={<div className="flex flex-wrap gap-1 rounded-xl border border-card-border bg-card p-0.5">{PERIOD_KEYS.map((key) => <button key={key} type="button" disabled={!available(key)} onClick={() => setPeriod(key)} className={`rounded-lg px-2 py-1 font-mono-app text-[10px] font-bold transition-colors disabled:opacity-30 ${period === key ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}>{key}</button>)}</div>}
-    >
-      {chartRows.length ? <div className="mt-4 h-[250px] w-full">
+    <div className="shrink-0 border-b border-card-border px-5 pb-3 pt-5">
+      {topContent}
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs font-bold">Precio y medias móviles</p>
+        <div className="flex flex-wrap gap-1 rounded-xl border border-card-border bg-card p-0.5">{PERIOD_KEYS.map((key) => <button key={key} type="button" disabled={!available(key)} onClick={() => setPeriod(key)} className={`rounded-lg px-2 py-1 font-mono-app text-[10px] font-bold transition-colors disabled:opacity-30 ${period === key ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}>{key}</button>)}</div>
+      </div>
+      {chartRows.length ? <div className="mt-2 h-[150px] w-full sm:h-[200px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartRows} margin={{ top: 8, right: 8, left: -18, bottom: 2 }}>
             <CartesianGrid stroke={COLORS.grid} strokeDasharray="2 3" vertical={false} />
             <XAxis dataKey="date" tickFormatter={shortDate} tick={{ fontSize: 9, fill: COLORS.muted }} axisLine={false} tickLine={false} minTickGap={34} />
             <YAxis domain={["auto", "auto"]} tick={{ fontSize: 9, fill: COLORS.muted, fontFamily: "DM Mono" }} axisLine={false} tickLine={false} tickFormatter={(value) => n(Number(value), 0)} width={48} />
             <Tooltip labelFormatter={(label) => shortDate(String(label))} formatter={(value, name) => [typeof value === "number" ? n(value) : "—", String(name)]} contentStyle={TOOLTIP_STYLE} />
-            <Legend verticalAlign="top" align="right" iconType="plainline" wrapperStyle={{ fontSize: 10, paddingBottom: 8 }} />
+            <Legend verticalAlign="top" align="right" iconType="plainline" wrapperStyle={{ fontSize: 10, paddingBottom: 4 }} />
             <Line type="monotone" dataKey="close" name="Precio" stroke={COLORS.fg} strokeWidth={2.2} dot={false} activeDot={{ r: 3 }} isAnimationActive={false} />
             <Line type="monotone" dataKey="sma20" name="SMA20" stroke={COLORS.coral} strokeWidth={1.4} dot={false} isAnimationActive={false} />
             <Line type="monotone" dataKey="sma50" name="SMA50" stroke={COLORS.teal} strokeWidth={1.4} dot={false} isAnimationActive={false} />
@@ -406,39 +433,23 @@ export function AssetInsights({ ticker, price, fallbackHistory, dcaContent }: { 
             <Line type="monotone" dataKey="sma200" name="SMA200" stroke={COLORS.amber} strokeWidth={1.7} dot={false} isAnimationActive={false} />
           </LineChart>
         </ResponsiveContainer>
-      </div> : <div className="mt-4 flex h-32 items-center justify-center rounded-xl bg-card text-xs text-muted-foreground">{query.isLoading ? "Cargando historia…" : "Histórico no disponible para este período."}</div>}
-
-      <div className="mt-4 overflow-x-auto rounded-xl border border-card-border bg-card">
-        <table className="w-full min-w-[420px] text-[11px]">
-          <thead><tr className="text-left text-[9px] uppercase tracking-[.1em] text-muted-foreground"><th className="px-3 py-2">Período</th><th className="px-3 py-2 text-right">Rendimiento</th><th className="px-3 py-2 text-right">Promedio anual</th><th className="px-3 py-2 text-right">S&P 500</th><th className="px-3 py-2 text-right">Diferencia</th></tr></thead>
-          <tbody>{query.isLoading ? <tr><td colSpan={5} className="px-3 py-3 text-muted-foreground">Calculando rendimientos…</td></tr> : analysis ? analysis.periods.map((row) => {
-            const diff = row.totalReturn !== null && row.benchmarkReturn !== null ? row.totalReturn - row.benchmarkReturn : null;
-            const tone = (value: number | null) => value === null ? "text-muted-foreground" : value >= 0 ? "text-accent" : "text-destructive";
-            return <tr key={row.key} onClick={() => row.startDate && setPeriod(row.key as PeriodKey)} className={`cursor-pointer border-t border-card-border ${period === row.key ? "bg-secondary/60" : "hover:bg-secondary/30"}`}>
-              <td className="px-3 py-1.5 font-bold">{row.label}</td>
-              <td className={`px-3 py-1.5 text-right font-mono-app ${tone(row.totalReturn)}`}>{pct(row.totalReturn)}</td>
-              <td className={`px-3 py-1.5 text-right font-mono-app ${tone(row.cagr)}`}>{row.cagr === null ? (row.startDate ? <span className="text-muted-foreground">menos de 1 año</span> : "—") : `${pct(row.cagr)} / año`}</td>
-              <td className="px-3 py-1.5 text-right font-mono-app text-muted-foreground">{row.benchmarkCagr !== null ? `${pct(row.benchmarkCagr)} / año` : pct(row.benchmarkReturn)}</td>
-              <td className={`px-3 py-1.5 text-right font-mono-app ${tone(diff)}`}>{pct(diff)}</td>
-            </tr>;
-          }) : <tr><td colSpan={5} className="px-3 py-3 text-muted-foreground">{query.error instanceof Error ? query.error.message : "Sin datos"}</td></tr>}</tbody>
-        </table>
-      </div>
-      <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">Rendimiento total con dividendos reinvertidos. "Promedio anual" es la tasa compuesta anual (CAGR): cuánto habría crecido por año de forma constante. Solo se calcula para períodos de 1 año o más.</p>
-    </Section>
-
-    <div className="mt-5 flex rounded-2xl border border-card-border bg-secondary/40 p-1" role="tablist">
-      {([["dca", "DCA"], ["risk", "Riesgo"], ["value", "Valor"]] as const).map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={lens === key} onClick={() => setLens(key)} className={`flex-1 rounded-xl px-3 py-2 text-xs font-bold transition-colors ${lens === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>)}
+      </div> : <div className="mt-2 flex h-32 items-center justify-center rounded-xl bg-card text-xs text-muted-foreground">{query.isLoading ? "Cargando historia…" : "Histórico no disponible para este período."}</div>}
     </div>
 
-    {lens === "dca" && <>{dcaContent}<DcaSimulator history={fullHistory} loading={query.isLoading} /></>}
-    {lens !== "dca" && (query.isLoading ? <div className="mt-4 h-48 animate-pulse rounded-2xl bg-secondary/40" /> : !analysis ? <p className="mt-4 rounded-2xl bg-secondary/40 px-4 py-3 text-xs text-muted-foreground">{query.error instanceof Error ? query.error.message : "Análisis no disponible."}</p> : lens === "risk"
-      ? <Section title="Riesgo" subtitle="Cuánto oscila, cuánto ha llegado a caer y cómo se comporta frente al S&P 500.">
-        <RiskLens analysis={analysis} period={period} history={periodHistory} />
-      </Section>
-      : <Section title="Valor" subtitle={analysis.type === "ETF" ? "Costos, tamaño y composición del fondo." : "Valoración, calidad del negocio y dividendo."}>
-        <ValueLens analysis={analysis} price={price} />
-      </Section>)}
-    {analysis?.errors.length ? <p className="mt-2 text-[10px] text-muted-foreground">{analysis.errors.join(" ")}</p> : null}
+    <div className="shrink-0 px-5 pt-3">
+      <div className="flex gap-1 overflow-x-auto rounded-2xl border border-card-border bg-secondary/40 p-1" role="tablist">
+        {LENSES.map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={lens === key} onClick={() => setLens(key)} className={`min-w-[64px] flex-1 rounded-xl px-3 py-2 text-xs font-bold transition-colors ${lens === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>)}
+      </div>
+    </div>
+
+    <div key={lens} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5 pt-1" role="tabpanel">
+      {lens === "signal" && signalContent}
+      {lens === "avg" && averagesContent}
+      {lens === "ret" && <div className="mt-4">{returnsTable}</div>}
+      {lens === "dca" && <DcaSimulator history={fullHistory} loading={query.isLoading} />}
+      {lens === "risk" && (waiting ?? <Section title="Riesgo" subtitle="Cuánto oscila, cuánto ha llegado a caer y cómo se comporta frente al S&P 500."><RiskLens analysis={analysis!} period={period} history={periodHistory} /></Section>)}
+      {lens === "value" && (waiting ?? <Section title="Valor" subtitle={analysis!.type === "ETF" ? "Costos, tamaño y composición del fondo." : "Valoración, calidad del negocio y dividendo."}><ValueLens analysis={analysis!} price={price} /></Section>)}
+      {analysis?.errors.length ? <p className="mt-2 text-[10px] text-muted-foreground">{analysis.errors.join(" ")}</p> : null}
+    </div>
   </>;
 }

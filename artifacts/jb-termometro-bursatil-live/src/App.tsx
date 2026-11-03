@@ -912,59 +912,43 @@ function AssetAnalysisModal({ asset, onClose }: { asset: Asset; onClose: () => v
   const positiveChange = asset.change === null ? null : asset.change >= 0;
   const hasFullTechnicalHistory = asset.level !== null;
   const history = asset.history ?? [];
-  return <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(16,28,36,.46)] p-0 backdrop-blur-[2px] sm:items-center sm:p-5" onClick={onClose}>
-    <div className="max-h-[92dvh] w-full max-w-3xl overflow-y-auto rounded-t-3xl border border-card-border bg-card p-5 shadow-2xl sm:rounded-3xl" onClick={(event) => event.stopPropagation()}>
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3"><TickerMark value={asset.ticker} large /><div><p className="font-mono-app text-sm font-bold"><TickerText value={asset.ticker} /> <span translate="no" className="notranslate ml-1 font-sans text-[10px] font-medium text-muted-foreground">{asset.type}</span></p><p className="mt-0.5 text-xs text-muted-foreground">{asset.name}</p></div></div>
+  const topContent = <>
+    <div className="flex items-start justify-between gap-4">
+      <div className="flex items-center gap-3"><TickerMark value={asset.ticker} large /><div><p className="font-mono-app text-sm font-bold"><TickerText value={asset.ticker} /> <span translate="no" className="notranslate ml-1 font-sans text-[10px] font-medium text-muted-foreground">{asset.type}</span></p><p className="mt-0.5 text-xs text-muted-foreground">{asset.name}</p></div></div>
+      <div className="flex items-center gap-1">
+        <SignalBadge value={asset.signal} />
+        <a href={getYahooAdvancedChartUrl(asset.ticker)} target="_blank" rel="noopener noreferrer" className="rounded-lg p-2 text-muted-foreground hover:bg-secondary" aria-label={`Abrir gráfico avanzado de Yahoo Finance para ${asset.ticker}`} title="Gráfico avanzado en Yahoo Finance (RSI 14 y SMA20/50/100/200)"><ExternalLink className="h-4 w-4" /></a>
         <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-secondary" aria-label="Cerrar detalle"><X className="h-4 w-4" /></button>
       </div>
-
-      <a
-        href={getYahooAdvancedChartUrl(asset.ticker)}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-primary/25 bg-primary/5 px-4 py-3 transition-colors hover:border-primary/45 hover:bg-primary/10"
-        aria-label={`Abrir gráfico avanzado de Yahoo Finance para ${asset.ticker}`}
-      >
-        <span className="flex min-w-0 items-center gap-3">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground"><BarChart3 className="h-4 w-4" /></span>
-          <span className="min-w-0">
-            <span className="block text-xs font-bold">Abrir gráfico avanzado en Yahoo Finance</span>
-            <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">1D · 1Y · RSI 14 · SMA20 · SMA50 · SMA100 · SMA200</span>
-          </span>
-        </span>
-        <ExternalLink className="h-4 w-4 shrink-0 text-primary" />
-      </a>
-
-       {!hasFullTechnicalHistory && <div className="mt-4 rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-[11px] leading-relaxed text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300"><strong className="text-foreground">Datos actuales disponibles.</strong> Yahoo Finance ha devuelto {asset.historyDays} sesiones válidas; la señal y el Nivel JB se habilitarán al completar 200 sesiones para SMA200.</div>}
-
-        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-         <div className="detail-stat"><span>Última cotización</span><strong>{formatNumber(asset.price)}</strong><small>{asset.quoteUpdatedAt ? formatTime(asset.quoteUpdatedAt) : "Yahoo Finance"}</small></div>
-        <div className="detail-stat"><span>Cambio diario</span><strong className={positiveChange === null ? "text-muted-foreground" : positiveChange ? "text-accent" : "text-destructive"}>{formatPercent(asset.change)}</strong></div>
-        <div className="detail-stat"><span>RSI Wilder 14</span><strong>{formatNumber(asset.rsi, 1)}</strong></div>
-        <div className="detail-stat"><span>Posición JB</span><strong className="text-xs leading-tight">{asset.position}</strong></div>
-      </div>
-
-      <AssetInsights ticker={asset.ticker} price={asset.price} fallbackHistory={history} dcaContent={<>
-      <section className="mt-5 rounded-2xl border border-card-border bg-secondary/30 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-xs font-bold">Precio frente a medias móviles</p><p className="mt-0.5 text-[11px] text-muted-foreground">Cierres diarios de Yahoo Finance; cada lectura compara el último precio con su media.</p></div><span className="rounded-full bg-card px-2.5 py-1 font-mono-app text-[10px] text-muted-foreground">Histórico diario</span></div>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">{averages.map((average) => {
-          const difference = differenceFromAverage(asset.price, average.value);
-          const above = difference === null ? null : difference >= 0;
-          return <div key={average.label} className="rounded-xl border border-card-border bg-card px-3 py-2.5"><div className="flex items-start justify-between gap-3"><div><p className="font-mono-app text-xs font-bold">{average.label} <span className="font-sans font-medium text-muted-foreground">{formatNumber(average.value)}</span></p><p className="mt-0.5 text-[10px] text-muted-foreground">{average.description}</p></div><span className={`shrink-0 text-[10px] font-bold ${above === null ? "text-muted-foreground" : above ? "text-accent" : "text-destructive"}`}>{above === null ? "Pendiente" : above ? "Por encima" : "Por debajo"}</span></div><p className={`mt-2 font-mono-app text-[11px] ${above === null ? "text-muted-foreground" : above ? "text-accent" : "text-destructive"}`}>{difference === null ? `Requiere más sesiones para ${average.label}` : `${formatPercent(difference)} frente a ${average.label}`}</p></div>;
-        })}</div>
-      </section>
-
-      <section className="mt-4 rounded-2xl border border-card-border p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-xs font-bold">Cómo se calcula la señal JB</p><p className="mt-0.5 text-[11px] text-muted-foreground">Explicación de la regla actual, no una recomendación de inversión.</p></div><SignalBadge value={asset.signal} /></div>
-        <div className="mt-3 grid gap-2 sm:grid-cols-3">
-          <div className="rounded-xl bg-secondary/50 p-3"><p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">1 · Zona SMA</p><p className="mt-1 font-mono-app text-lg font-bold">{asset.pointsSma === null ? "Pendiente" : `${formatNumber(asset.pointsSma, 0)} pts`}</p><p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{asset.position}</p></div>
-          <div className="rounded-xl bg-secondary/50 p-3"><p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">2 · RSI 14</p><p className="mt-1 font-mono-app text-lg font-bold">{asset.pointsRsi === null ? "Pendiente" : `${formatNumber(asset.pointsRsi, 1)} pts`}</p><p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">RSI {formatNumber(asset.rsi, 1)} · fórmula limitada a 0–50 puntos.</p></div>
-          <div className="rounded-xl bg-secondary/50 p-3"><p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">3 · Nivel final</p><p className={`mt-1 font-mono-app text-lg font-bold ${levelTone(asset.level)}`}>{asset.level === null ? "Pendiente" : `${asset.level} / 100`}</p><p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{hasFullTechnicalHistory ? "La regla trunca la suma y aplica sus límites de seguridad." : "Se calculará al contar con SMA200."}</p></div>
-        </div>
-        <p className="mt-3 rounded-xl bg-primary/5 px-3 py-2.5 text-[11px] leading-relaxed text-muted-foreground">{signalExplanation(asset)}</p>
-      </section>
-      </>} />
+    </div>
+    {!hasFullTechnicalHistory && <div className="mt-3 rounded-2xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-[11px] leading-relaxed text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300"><strong className="text-foreground">Datos actuales disponibles.</strong> Yahoo Finance ha devuelto {asset.historyDays} sesiones válidas; la señal y el Nivel JB se habilitarán al completar 200 sesiones para SMA200.</div>}
+    <div className="mt-3 grid grid-cols-4 gap-2">
+      <div className="detail-stat"><span>Cotización</span><strong>{formatNumber(asset.price)}</strong></div>
+      <div className="detail-stat"><span>Diario</span><strong className={positiveChange === null ? "text-muted-foreground" : positiveChange ? "text-accent" : "text-destructive"}>{formatPercent(asset.change)}</strong></div>
+      <div className="detail-stat"><span>RSI 14</span><strong>{formatNumber(asset.rsi, 1)}</strong></div>
+      <div className="detail-stat"><span>Nivel JB</span><strong className={levelTone(asset.level)}>{asset.level === null ? "Pendiente" : `${asset.level}`}</strong></div>
+    </div>
+  </>;
+  const averagesContent = <section className="mt-4 rounded-2xl border border-card-border bg-secondary/30 p-4">
+    <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-xs font-bold">Precio frente a medias móviles</p><p className="mt-0.5 text-[11px] text-muted-foreground">Cierres diarios de Yahoo Finance; cada lectura compara el último precio con su media. Posición JB: {asset.position}</p></div><span className="rounded-full bg-card px-2.5 py-1 font-mono-app text-[10px] text-muted-foreground">Histórico diario · última cotización {asset.quoteUpdatedAt ? formatTime(asset.quoteUpdatedAt) : "Yahoo Finance"}</span></div>
+    <div className="mt-3 grid gap-2 sm:grid-cols-2">{averages.map((average) => {
+      const difference = differenceFromAverage(asset.price, average.value);
+      const above = difference === null ? null : difference >= 0;
+      return <div key={average.label} className="rounded-xl border border-card-border bg-card px-3 py-2.5"><div className="flex items-start justify-between gap-3"><div><p className="font-mono-app text-xs font-bold">{average.label} <span className="font-sans font-medium text-muted-foreground">{formatNumber(average.value)}</span></p><p className="mt-0.5 text-[10px] text-muted-foreground">{average.description}</p></div><span className={`shrink-0 text-[10px] font-bold ${above === null ? "text-muted-foreground" : above ? "text-accent" : "text-destructive"}`}>{above === null ? "Pendiente" : above ? "Por encima" : "Por debajo"}</span></div><p className={`mt-2 font-mono-app text-[11px] ${above === null ? "text-muted-foreground" : above ? "text-accent" : "text-destructive"}`}>{difference === null ? `Requiere más sesiones para ${average.label}` : `${formatPercent(difference)} frente a ${average.label}`}</p></div>;
+    })}</div>
+  </section>;
+  const signalContent = <section className="mt-4 rounded-2xl border border-card-border p-4">
+    <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-xs font-bold">Cómo se calcula la señal JB</p><p className="mt-0.5 text-[11px] text-muted-foreground">Explicación de la regla actual, no una recomendación de inversión.</p></div><SignalBadge value={asset.signal} /></div>
+    <div className="mt-3 grid gap-2 sm:grid-cols-3">
+      <div className="rounded-xl bg-secondary/50 p-3"><p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">1 · Zona SMA</p><p className="mt-1 font-mono-app text-lg font-bold">{asset.pointsSma === null ? "Pendiente" : `${formatNumber(asset.pointsSma, 0)} pts`}</p><p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{asset.position}</p></div>
+      <div className="rounded-xl bg-secondary/50 p-3"><p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">2 · RSI 14</p><p className="mt-1 font-mono-app text-lg font-bold">{asset.pointsRsi === null ? "Pendiente" : `${formatNumber(asset.pointsRsi, 1)} pts`}</p><p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">RSI {formatNumber(asset.rsi, 1)} · fórmula limitada a 0–50 puntos.</p></div>
+      <div className="rounded-xl bg-secondary/50 p-3"><p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">3 · Nivel final</p><p className={`mt-1 font-mono-app text-lg font-bold ${levelTone(asset.level)}`}>{asset.level === null ? "Pendiente" : `${asset.level} / 100`}</p><p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{hasFullTechnicalHistory ? "La regla trunca la suma y aplica sus límites de seguridad." : "Se calculará al contar con SMA200."}</p></div>
+    </div>
+    <p className="mt-3 rounded-xl bg-primary/5 px-3 py-2.5 text-[11px] leading-relaxed text-muted-foreground">{signalExplanation(asset)}</p>
+  </section>;
+  return <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(16,28,36,.46)] p-0 backdrop-blur-[2px] sm:items-center sm:p-5" onClick={onClose}>
+    <div className="flex h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border border-card-border bg-card shadow-2xl sm:h-[min(820px,92dvh)] sm:rounded-3xl" onClick={(event) => event.stopPropagation()}>
+      <AssetInsights ticker={asset.ticker} price={asset.price} fallbackHistory={history} topContent={topContent} signalContent={signalContent} averagesContent={averagesContent} />
     </div>
   </div>;
 }
