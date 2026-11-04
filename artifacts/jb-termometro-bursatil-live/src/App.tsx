@@ -785,28 +785,27 @@ function EmergingMarketIdeasSection() {
   const ideas = allIdeas.filter((idea) => !capOnly || idea.indexStyle === "Capitalización").slice(0, 10);
   const stale = Boolean(payload?.stale);
   const hasPartialData = Boolean(payload?.errors?.length);
+  const [open, setOpen] = useState(false);
+  const preview = allIdeas.slice(0, 3);
 
   return (
     <section id="emerging-ideas" className="break-avoid scroll-mt-6 overflow-hidden rounded-2xl border border-[#d7c79d] bg-card shadow-sm dark:border-[#6d5e38]" data-testid="section-emerging-market-ideas">
-      <div className="border-b border-[#d7c79d]/70 bg-gradient-to-r from-[#f7efd8] via-card to-[#e8f2ee] px-4 py-5 dark:border-[#6d5e38] dark:from-[#332e20] dark:via-card dark:to-[#16322f] sm:px-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex min-w-0 items-start gap-3">
-            <div className="relative grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-[#c6a85b] bg-[#f5d889] text-[#634d19] shadow-[inset_0_2px_0_rgba(255,255,255,.5)] dark:border-[#9d8138] dark:bg-[#584923] dark:text-[#f7d77f]">
-              <span className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-primary text-primary-foreground"><Sparkles className="h-2.5 w-2.5" /></span>
-              <span className="text-xl" aria-hidden="true">✦</span>
-            </div>
-            <div className="min-w-0">
-              <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[.16em] text-[#856b2b] dark:text-[#e4c875]"><Gem className="h-3 w-3" /> Cofres de investigación</p>
-              <h2 className="mt-1 font-display text-xl font-bold tracking-[-.04em] sm:text-2xl">Ideas ETF de mercados emergentes</h2>
-              <p className="mx-auto mt-1 max-w-2xl text-center text-xs font-bold leading-relaxed text-foreground">Las 10 mejores pistas de un escaneo de ETF de todo el mundo emergente. Se ordenan juntas, sin importar el país, por retorno de 200 sesiones, tendencia, caída máxima, costo y liquidez.</p>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2 self-start">
-            {ideasQuery.isFetching && payload ? <span className="rounded-full bg-accent/10 px-2.5 py-1 text-[10px] font-bold text-accent" data-testid="status-emerging-ideas-refreshing">Actualizando…</span> : null}
-            <span className="rounded-full border border-card-border bg-card/80 px-2.5 py-1 text-[10px] font-bold text-muted-foreground">{payload?.candidatesEvaluated ?? "—"} evaluados</span>
-          </div>
-        </div>
-        <div className="mt-4 flex flex-col gap-1.5 border-t border-[#d7c79d]/70 pt-3 text-[10px] leading-relaxed text-muted-foreground dark:border-[#6d5e38] sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4">
+      <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-controls="emerging-ideas-body" className="flex w-full items-center gap-3 bg-gradient-to-r from-[#f7efd8] via-card to-[#e8f2ee] px-4 py-3 text-left dark:from-[#332e20] dark:via-card dark:to-[#16322f] sm:px-6 print:hidden" data-testid="toggle-emerging-ideas-open">
+        <span className="relative grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-[#c6a85b] bg-[#f5d889] text-[#634d19] dark:border-[#9d8138] dark:bg-[#584923] dark:text-[#f7d77f]"><Gem className="h-4 w-4" /></span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[10px] font-bold uppercase tracking-[.16em] text-[#856b2b] dark:text-[#e4c875]">Cofres de investigación</span>
+          <span className="block truncate font-display text-sm font-bold tracking-[-.02em] sm:text-base">Ideas ETF de mercados emergentes</span>
+        </span>
+        <span className="hidden items-center gap-1.5 md:flex">{preview.map((idea) => <span key={idea.ticker} className="rounded-full border border-card-border bg-card/80 px-2 py-1 font-mono-app text-[10px] font-bold"><TickerText value={idea.ticker} /></span>)}</span>
+        {ideasQuery.isFetching && payload ? <span className="hidden rounded-full bg-accent/10 px-2.5 py-1 text-[10px] font-bold text-accent sm:inline" data-testid="status-emerging-ideas-refreshing">Actualizando…</span> : null}
+        <span className="hidden rounded-full border border-card-border bg-card/80 px-2.5 py-1 text-[10px] font-bold text-muted-foreground sm:inline">{payload?.candidatesEvaluated ?? "—"} evaluados</span>
+        <span className="flex shrink-0 items-center gap-1 text-[11px] font-bold text-muted-foreground">{open ? "Ocultar" : "Ver ideas"}<ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} /></span>
+      </button>
+
+      <div id="emerging-ideas-body" className={open ? "block" : "hidden print:block"}>
+      <div className="border-y border-[#d7c79d]/70 px-4 py-3 dark:border-[#6d5e38] sm:px-6">
+        <p className="max-w-3xl text-xs leading-relaxed text-foreground">Las 10 mejores pistas de un escaneo de ETF de todo el mundo emergente. Se ordenan juntas, sin importar el país, por retorno de 200 sesiones, tendencia, caída máxima, costo y liquidez.</p>
+        <div className="mt-2 flex flex-col gap-1.5 text-[10px] leading-relaxed text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4">
           <span data-testid="text-emerging-ideas-source">Fuente: {payload?.source ?? "Yahoo Finance"}</span>
           <span data-testid="text-emerging-ideas-updated">Actualizado: {payload?.updatedAt ? formatExactDateTime(payload.updatedAt) : "No disponible"}</span>
           <span>Cache servidor: 24 h{payload?.cached ? " · respuesta en caché" : ""}</span>
@@ -878,6 +877,7 @@ function EmergingMarketIdeasSection() {
           </div>
         )}
         <div className="mt-4 rounded-xl border border-card-border bg-secondary/40 px-3 py-2.5 text-[10px] leading-relaxed text-muted-foreground" data-testid="disclaimer-emerging-ideas">Estas son <strong className="text-foreground">ideas para investigar</strong>, no recomendaciones ni asesoramiento financiero. El ranking no cambia las señales JB ni sustituye sus reglas de RSI/SMA. El puntaje parte de 50 y suma el retorno de 200 sesiones (hasta ±50) y ±10 por tendencia. Resta hasta 20 por la caída máxima, hasta 8 por un ratio de gastos alto (1 punto por cada 0,10 % sobre 0,20 %) y 5 si se negocian menos de US$ 10 millones diarios. Es una lectura de impulso del pasado y no anticipa lo que hará el fondo. Solo entran fondos con 200 sesiones completas de datos de Yahoo Finance. Los ratios de gastos se revisan a mano (última revisión: {payload?.expenseRatiosAsOf ?? "No disponible"}).</div>
+      </div>
       </div>
     </section>
   );
