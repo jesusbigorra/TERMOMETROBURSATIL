@@ -117,7 +117,7 @@ function Rows({ head, rows }: { head: string[]; rows: Array<Array<ReactNode>> })
 type FormState = { ticker: string; units: string; avgCost: string };
 const EMPTY_FORM: FormState = { ticker: "", units: "", avgCost: "" };
 
-function PositionForm({ value, onChange, onSubmit, saving, error, editing, onCancel }: { value: FormState; onChange: (next: FormState) => void; onSubmit: (event: FormEvent) => void; saving: boolean; error: string | null; editing: boolean; onCancel: () => void }) {
+function PositionForm({ value, onChange, onSubmit, saving, error, editing, onCancel, hint }: { value: FormState; onChange: (next: FormState) => void; onSubmit: (event: FormEvent) => void; saving: boolean; error: string | null; editing: boolean; onCancel: () => void; hint?: string | null }) {
   const input = "w-full rounded-xl border border-card-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground";
   return <form onSubmit={onSubmit} className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
     <label className="text-xs font-semibold">Ticker
@@ -130,9 +130,10 @@ function PositionForm({ value, onChange, onSubmit, saving, error, editing, onCan
       <input className={`${input} mt-1`} value={value.avgCost} inputMode="decimal" placeholder="USD, para calcular tu ganancia" onChange={(e) => onChange({ ...value, avgCost: e.target.value })} />
     </label>
     <div className="flex gap-2">
-      <button type="submit" disabled={saving} className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground disabled:opacity-60"><Plus className="h-3.5 w-3.5" />{editing ? "Guardar" : "Añadir"}</button>
+      <button type="submit" disabled={saving} className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground disabled:opacity-60"><Plus className="h-3.5 w-3.5" />{editing ? "Guardar" : hint ? "Sumar compra" : "Añadir"}</button>
       {editing && <button type="button" onClick={onCancel} className="rounded-xl border border-card-border px-3 py-2 text-xs font-semibold">Cancelar</button>}
     </div>
+    {hint && !editing && <p className="rounded-xl bg-secondary/60 px-3 py-2 text-xs leading-relaxed text-muted-foreground sm:col-span-4">{hint}</p>}
     {error && <p className="text-xs font-semibold text-destructive sm:col-span-4" role="alert">{error}</p>}
   </form>;
 }
@@ -189,13 +190,40 @@ export function PortfolioPage({ onBack, signInHref }: { onBack: () => void; sign
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["portfolio"] }),
   });
 
+  // Comprar de nuevo un ticker que ya tienes suma las unidades y promedia el costo.
+  // Al editar (botón lápiz) se reemplazan los valores tal cual.
+  const mergePurchase = (ticker: string, units: number, avgCost: number | null) => {
+    const current = editing ? undefined : positions.find((p) => p.ticker === ticker.trim().toUpperCase());
+    if (!current) return null;
+    const totalUnits = Number((current.units + units).toFixed(6));
+    let mergedCost: number | null = null;
+    if (current.avgCost !== null && avgCost !== null) mergedCost = Number(((current.units * current.avgCost + units * avgCost) / totalUnits).toFixed(6));
+    return { current, totalUnits, mergedCost, missingCost: current.avgCost !== null && avgCost === null };
+  };
+  const fmtCost = (value: number) => value.toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+  const mergeHint = (() => {
+    const units = parseNumber(form.units);
+    const avgCost = form.avgCost.trim() ? parseNumber(form.avgCost) : null;
+    const current = editing ? undefined : positions.find((p) => p.ticker === form.ticker.trim().toUpperCase());
+    if (!current) return null;
+    const base = `Ya tienes ${current.units.toLocaleString("es-VE", { maximumFractionDigits: 6 })} unidades de ${current.ticker}${current.avgCost !== null ? ` a USD ${fmtCost(current.avgCost)}` : " sin costo registrado"}. La compra se suma a la posición.`;
+    if (units === null || units <= 0) return base;
+    const merged = mergePurchase(form.ticker, units, avgCost);
+    if (!merged) return base;
+    if (merged.missingCost) return `${base} Indica el costo de esta compra para promediar.`;
+    return `${base} Quedarán ${merged.totalUnits.toLocaleString("es-VE", { maximumFractionDigits: 6 })} unidades${merged.mergedCost !== null ? ` a un costo promedio de USD ${fmtCost(merged.mergedCost)}` : current.avgCost === null && avgCost !== null ? " sin costo promedio (la posición anterior no tenía costo, edítala si quieres registrarlo)" : ""}.`;
+  })();
+
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const units = parseNumber(form.units);
     const avgCost = form.avgCost.trim() ? parseNumber(form.avgCost) : null;
     if (!form.ticker.trim() || units === null || units <= 0) return setFormError("Indica el ticker y una cantidad de unidades mayor que cero.");
     if (form.avgCost.trim() && (avgCost === null || avgCost < 0)) return setFormError("El costo promedio debe ser un número válido.");
+    const merged = mergePurchase(form.ticker, units, avgCost);
+    if (merged?.missingCost) return setFormError("Esta posición tiene costo registrado. Indica el costo de la compra para promediarlo.");
     setFormError(null);
+    if (merged) return save.mutate({ ticker: merged.current.ticker, units: merged.totalUnits, avgCost: merged.mergedCost });
     save.mutate({ ticker: form.ticker.trim(), units, avgCost });
   };
 
@@ -314,8 +342,8 @@ export function PortfolioPage({ onBack, signInHref }: { onBack: () => void; sign
       <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">Anota lo que tienes y mira cuánto vale, qué riesgo lleva y cómo se reparte. Aquí no se compra ni se vende nada.</p>
     </div>
 
-    <Card title={editing ? `Editar ${form.ticker}` : "Añadir una posición"} subtitle={editing ? undefined : "Acciones y ETF de EE. UU. Si ya tienes el ticker, volver a añadirlo reemplaza las unidades."}>
-      <PositionForm value={form} onChange={setForm} onSubmit={submit} saving={save.isPending} error={formError} editing={editing} onCancel={() => { setEditing(false); setForm(EMPTY_FORM); setFormError(null); }} />
+    <Card title={editing ? `Editar ${form.ticker}` : "Añadir una posición"} subtitle={editing ? "Aquí corriges la posición: los valores reemplazan a los guardados." : "Acciones y ETF de EE. UU. Si ya tienes el ticker, la compra se suma a tu posición y el costo se promedia."}>
+      <PositionForm value={form} onChange={setForm} onSubmit={submit} saving={save.isPending} error={formError} editing={editing} hint={mergeHint} onCancel={() => { setEditing(false); setForm(EMPTY_FORM); setFormError(null); }} />
     </Card>
 
     {portfolio.isLoading && <p className="text-sm text-muted-foreground">Leyendo tu portafolio…</p>}
