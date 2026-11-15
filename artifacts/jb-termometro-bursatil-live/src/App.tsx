@@ -1318,6 +1318,7 @@ function Dashboard() {
               <div className="mt-4 flex items-center gap-3 sm:gap-4">
                 <MarketThermometerMark />
                 <h1 className="font-display text-[clamp(2rem,4.6vw,4.2rem)] font-bold leading-[.84] tracking-[-.08em]"><span className="block">TERMÓMETRO</span><span className="mt-2 block text-primary">BURSÁTIL</span></h1>
+                <span aria-label="Dólar" role="img" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 font-display text-2xl font-bold text-white shadow-md sm:h-14 sm:w-14 sm:text-3xl">$</span>
               </div>
               <p className="mt-5 max-w-xl text-sm leading-relaxed text-muted-foreground">Lee el pulso del mercado antes de mover ficha.</p>
             </div>
