@@ -598,6 +598,7 @@ function RefreshControl({ loading, onRefresh }: { loading: boolean; onRefresh: (
 
 function Sidebar({ isDark, setIsDark }: { isDark: boolean; setIsDark: (value: boolean) => void }) {
   const [guideExpanded, setGuideExpanded] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [quietMode, setQuietMode] = useState(false);
   const { isSignedIn } = useAuth();
   const { user } = useUser();
@@ -695,7 +696,7 @@ function Sidebar({ isDark, setIsDark }: { isDark: boolean; setIsDark: (value: bo
         <a href={`${basePath}/portafolio`} className="sidebar-link"><Wallet className="h-4 w-4" /> Portafolio</a>
       </nav>
       <div className="mt-auto hidden space-y-3 lg:block">
-        <div className="rounded-2xl border border-sidebar-border bg-sidebar-accent/50 p-3">
+        <div className="rounded-2xl border border-sidebar-border bg-sidebar-accent/50 p-3 [@media(max-height:820px)]:hidden">
           <div className="flex items-center gap-2 text-[11px] font-bold"><CircleHelp className="h-3.5 w-3.5 text-sidebar-primary" /> ¿Cómo leer el radar?</div>
           <p className="mt-2 text-[11px] leading-relaxed text-sidebar-foreground/55">La señal combina nivel JB, RSI y tendencia. No es una orden; es una brújula.</p>
           {guideExpanded && <p className="mt-2 border-t border-sidebar-border pt-2 text-[11px] leading-relaxed text-sidebar-foreground/55">Busca niveles bajos con RSI contenido y espera confirmación de tendencia. La paciencia también es una posición.</p>}
@@ -706,7 +707,14 @@ function Sidebar({ isDark, setIsDark }: { isDark: boolean; setIsDark: (value: bo
           {ADMIN_EMAILS.has(email.toLowerCase()) && <a href={`${basePath}/admin`} className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-sidebar-border px-3 py-2 text-xs font-bold text-sidebar-foreground hover:bg-sidebar-accent"><BarChart3 className="h-3.5 w-3.5" /> Panel admin</a>}
           <button type="button" onClick={() => void signOut({ redirectUrl: basePath || "/" })} className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-sidebar-accent px-3 py-2 text-xs font-bold text-sidebar-foreground hover:opacity-90"><LogOut className="h-3.5 w-3.5" /> Cerrar sesión</button>
         </div>}
-        <div className="flex items-center justify-between border-t border-sidebar-border pt-4">
+        <div className="relative flex items-center justify-between border-t border-sidebar-border pt-4">
+          {helpOpen && <div className="absolute bottom-full left-0 right-0 mb-2 hidden rounded-2xl border border-sidebar-border bg-sidebar p-3 shadow-lg [@media(max-height:820px)]:block">
+            <div className="flex items-center gap-2 text-[11px] font-bold"><CircleHelp className="h-3.5 w-3.5 text-sidebar-primary" /> ¿Cómo leer el radar?</div>
+            <p className="mt-2 text-[11px] leading-relaxed text-sidebar-foreground/55">La señal combina nivel JB, RSI y tendencia. No es una orden; es una brújula.</p>
+            <p className="mt-2 border-t border-sidebar-border pt-2 text-[11px] leading-relaxed text-sidebar-foreground/55">Busca niveles bajos con RSI contenido y espera confirmación de tendencia. La paciencia también es una posición.</p>
+            <a href={`${basePath}/metodologia`} className="mt-3 inline-block text-[11px] font-bold text-sidebar-primary hover:underline">Metodología y evidencia <ArrowUpRight className="ml-0.5 inline h-3 w-3" /></a>
+          </div>}
+          <button type="button" onClick={() => setHelpOpen((open) => !open)} className="hidden rounded-lg p-2 text-sidebar-foreground/55 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground [@media(max-height:820px)]:inline-flex" aria-label="¿Cómo leer el radar?" aria-expanded={helpOpen}><CircleHelp className="h-4 w-4" /></button>
            <span className="flex items-center gap-2 text-xs text-sidebar-foreground/55"><span className="h-1.5 w-1.5 rounded-full bg-sidebar-primary" /> Datos Yahoo Finance</span>
           <button type="button" onClick={() => setIsDark(!isDark)} className="rounded-lg p-2 text-sidebar-foreground/55 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground" aria-label="Cambiar modo de color">
             {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
