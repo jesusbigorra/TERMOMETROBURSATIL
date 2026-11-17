@@ -664,7 +664,7 @@ function Sidebar({ isDark, setIsDark }: { isDark: boolean; setIsDark: (value: bo
   }, [active]);
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
   return (
-    <aside ref={asideRef} className={`sticky top-0 z-40 flex w-full flex-col border-b border-sidebar-border bg-sidebar px-5 py-3 text-sidebar-foreground shadow-sm transition-opacity duration-300 lg:fixed lg:py-6 lg:shadow-none lg:inset-y-0 lg:left-0 lg:w-[238px] lg:border-b-0 lg:border-r lg:px-4 ${quietMode ? "opacity-75" : ""}`}>
+    <aside ref={asideRef} className={`sticky top-0 z-40 flex w-full flex-col border-b border-sidebar-border bg-sidebar px-5 py-3 text-sidebar-foreground shadow-sm transition-opacity duration-300 lg:fixed lg:overflow-y-auto lg:py-6 lg:shadow-none lg:inset-y-0 lg:left-0 lg:w-[238px] lg:border-b-0 lg:border-r lg:px-4 ${quietMode ? "opacity-75" : ""}`}>
       <div className="flex items-center justify-between lg:block">
         <div className="flex items-center gap-3">
           <div className="brand-mark"><span>JB</span><i /></div>
@@ -685,7 +685,7 @@ function Sidebar({ isDark, setIsDark }: { isDark: boolean; setIsDark: (value: bo
         </div>
       </div>
       <div className="mt-7 hidden text-[10px] font-bold uppercase tracking-[0.18em] text-sidebar-foreground/40 lg:block">Radar</div>
-      <nav ref={navRef} className="mt-3 flex gap-2 overflow-x-auto scrollbar-none lg:block lg:space-y-1" aria-label="Secciones">
+      <nav ref={navRef} className="mt-3 flex gap-2 overflow-x-auto scrollbar-none lg:block lg:shrink-0 lg:space-y-1 lg:overflow-visible" aria-label="Secciones">
         {navItems.map((item) => {
           const Icon = item.icon;
           return <button key={item.key} type="button" data-nav={item.key} aria-current={active === item.key ? "true" : undefined} onClick={() => goTo(item.key, item.target)} className={`sidebar-link${active === item.key ? " sidebar-link-active" : ""}`}><Icon className="h-4 w-4" /> {item.label}</button>;
